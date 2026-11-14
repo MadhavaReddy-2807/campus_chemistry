@@ -7,6 +7,6 @@ export const metadata: Metadata = {
   description: "A private, verified campus social network for IIT and NIT students.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return <html lang="en"><body><PwaRegister />{children}</body></html>;
 }
