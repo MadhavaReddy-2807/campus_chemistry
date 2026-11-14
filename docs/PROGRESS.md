@@ -1,0 +1,70 @@
+# Progress
+
+## 2026-11-13
+
+- Audited `C:\Users\madhava`; no existing Campus Chemistry repository found.
+- Created new workspace at `C:\Users\madhava\campus-chemistry`.
+- Researched required product categories, five named repositories, and official institute sources.
+- Added research, feature matrix, architecture, and design system documents.
+- Scaffolded a strict TypeScript Next.js App Router shell with responsive desktop/mobile compositions.
+- Added an interactive development-mode home surface with discovery, social feed, events, composer, safety note, and explicit placeholder state.
+- Added the first normalized Postgres migration covering identity, verification, social, dating, messaging, events, safety, notifications, and baseline RLS.
+- `npm run lint` passes; `npm run build` passes.
+- npm install reports 7 moderate dependency audit findings to review before release.
+- Added browser/server Supabase SSR helpers, explicit environment validation, and Zod auth schemas.
+- Added environment-aware Supabase session-refresh middleware.
+- Added resumable onboarding drafts, profile-photo storage metadata, server-side dating eligibility/preferences checks, and an atomic discovery-action/match function.
+- Added a reviewed two-institute pilot seed plus interest and prompt seeds; the full directory remains an admin-reviewed data task.
+- Added Vitest domain tests for age eligibility, canonical match pairs, and self-match rejection.
+- Added real route surfaces for `/discover`, `/messages`, `/meetups`, `/create`, and `/safety` with explicit no-credentials/empty states.
+- Added database-backed post creation, meetup creation, capacity-aware RSVP RPC, authorized message reads/sends, and meetup/conversation detail routes.
+- Next.js Cache Components compatibility is handled with `connection()`/`instant = false`; build now succeeds with dynamic route output.
+- Latest checks: 3 Vitest tests passed, ESLint passed, production build passed with 15 routes.
+- Added transient-credential database scripts for applying migrations/seeds and checking RLS/function/pilot-directory state.
+- Added persisted profile view/edit routes and server-validated privacy controls for social visibility, dating visibility, cross-campus discovery, message permissions, and activity visibility.
+- Added safety/admin migration with explicit moderator roles, audited moderation actions, block/unmatch RPCs, private reports, and block-aware message RLS.
+- Added live discovery action forms for like/pass/block and a moderator queue route with audited report resolution.
+- Live Supabase connection attempt was made without writing credentials; the supplied direct host is unreachable from this environment because it resolves to IPv6 only here. No remote schema changes were applied.
+- Latest local checks: 3 Vitest tests passed, ESLint passed, production build passed with 21 routes, production dependency audit clean.
+- Added installable PWA manifest, theme metadata, safe-area-compatible mobile shell, and network-only service-worker registration that avoids caching private data.
+- Added a real `/feed` route with database-backed post reads, likes, comments, and post creation redirect; the home surface now links to it instead of presenting a sample post as live.
+- Added database-backed `/matches`, `/notifications`, and `/explore` surfaces with private empty states, notification read actions, visible-profile search, and match-to-conversation routing.
+- Added protected profile update RPCs and revoked direct authenticated profile UPDATE privileges so verification status and other protected fields cannot be client-tampered.
+- Added the next onboarding step at `/onboarding/verify`: server-side approved-domain validation creates a pending request while storing only the domain, with raw email retention avoided.
+- Added moderator-only `/admin/verifications` review with an atomic approve/reject RPC that updates the request, profile verification status, and audit log together.
+- Added the authenticated execute grant for the moderator helper and included it in the database smoke checks.
+- Added `/settings/account` and `/account/export` for user-scoped JSON export plus a non-destructive, audited account-deletion request flow.
+- Expanded browser smoke coverage passes: 27 tests passed, 1 intentionally skipped, including account controls on desktop and mobile.
+- Added a scoped Supabase Realtime message subscription for each authorized conversation, deduplicating incoming inserts and cleaning up the channel on navigation.
+- Fixed public-profile navigation: `/profile?user=<id>` now renders only privacy-visible target fields, while owner-only editing and privacy controls remain restricted to the signed-in user.
+- Added server-validated follow/unfollow actions on visible verified public profiles, using the existing user-owned follower RLS boundary.
+- Added audience-aware post RLS: public, same-institute campus, and accepted-follower visibility now apply consistently to posts, media, and comments.
+- Tightened post interactions so likes and comments require visibility of the parent post; own likes remain removable even after visibility changes.
+- Expanded unit coverage to onboarding email/institute validation and profile/privacy boundaries: 3 test files, 8 tests passing.
+- Added a configurable Valentine's Hub for February 7–14, 2027 with countdown, themed calendar, friendship alternatives, meetup entry point, and consent-aware icebreakers.
+- Added Postgres-backed abuse rate limiting with transaction-scoped locking for discovery actions, report submissions, and message sends.
+- Added privacy-safe notification triggers for mutual matches, new messages, and accepted follows; message content is never copied into notifications.
+- Added private notification preferences at `/settings/notifications` for in-app, email, web push, read receipts, and activity status controls.
+- Hardened meetup visibility to same-institute campus access, verified inter-campus access, and explicit invite-only membership; added protected RSVP withdrawal and host institute assignment.
+- Added meetup list/create route coverage to the browser smoke matrix.
+- Expanded browser smoke coverage passes: 37 tests passed, 1 intentionally skipped, including meetup routes on desktop and mobile.
+- Expanded browser smoke coverage passes: 33 tests passed, 1 intentionally skipped, including notification preferences on desktop and mobile.
+- Fixed countdown prerendering and expanded browser smoke coverage: 31 tests passed, 1 intentionally skipped, including the Valentine's Hub on desktop and mobile.
+- Expanded browser smoke coverage passes: 29 tests passed, 1 intentionally skipped, including profile viewing on desktop and mobile.
+- Direct database check with the supplied password still fails DNS resolution for the Supabase direct host; no remote migration was applied.
+- Expanded browser smoke coverage passes: 23 tests passed, 1 intentionally skipped, including the new verification route on desktop and mobile.
+- Expanded browser smoke coverage again passes: 25 tests passed, 1 intentionally skipped, including the moderator verification route on desktop and mobile.
+- Latest local checks after feed work: 3 Vitest tests passed, ESLint passed, production build passed with 23 routes, production dependency audit clean.
+- Added GitHub Actions CI for install, unit tests, lint, production build, and production dependency audit.
+- Added Playwright smoke tests for public/onboarding routes, mobile navigation, and axe accessibility scanning.
+- Added a dedicated CI browser job with Chromium installation and Playwright execution; CI now also runs strict TypeScript checking.
+- Added baseline security headers and disabled the Next.js powered-by header.
+- Runtime smoke test confirmed HTTP 200 plus `nosniff`, `DENY`, strict referrer, permissions, and HSTS headers.
+- Added `/login`, `/signup`, and the first `/onboarding` institute-selection route.
+- `npm run lint` and `npm run build` pass after the auth slice.
+- Separated Vitest and Playwright test discovery; the unit suite now passes with 3 tests.
+- Playwright smoke suite passes: 15 tests passed, 1 intentionally skipped for the desktop-only mobile assertion, including axe checks on desktop and mobile.
+- Expanded Playwright coverage passes: 21 tests passed, 1 intentionally skipped for the desktop-only mobile assertion; new Explore, Matches, and Notifications routes are covered on desktop and mobile.
+- Latest local checks: unit tests passed, ESLint passed, production build passed with 23 routes, and `npm audit --omit=dev` reported 0 vulnerabilities.
+- Next: connect a real Supabase project, add institute seed/import review, auth session middleware, onboarding persistence, and automated RLS/domain tests.
+

@@ -1,0 +1,6 @@
+import Link from "next/link";
+import { reportUser } from "../actions";
+
+export default function ReportPage() {
+  return <main className="module-page"><div className="module-topbar"><Link href="/safety" className="auth-brand"><span className="brand-mark">cc</span><span>campus chemistry</span></Link><Link href="/safety" className="text-button">Safety centre <span>←</span></Link></div><section className="create-card"><span className="eyebrow">PRIVATE REPORT</span><h1>Tell us what happened.</h1><p>Reports are only visible to the reporter and authorized moderators. If there is immediate danger, contact local emergency services.</p><form action={reportUser} className="post-form"><label>User ID<input name="reportedUserId" required placeholder="Paste the profile ID" /></label><label>Reason<select name="reason" required defaultValue=""><option value="" disabled>Select a reason</option><option>Harassment or unwanted contact</option><option>Impersonation</option><option>Threats or safety concern</option><option>Non-consensual intimate content</option><option>Spam or scam</option><option>Other</option></select></label><label>Details<textarea name="details" maxLength={2000} placeholder="What should our moderators know?" /></label><button className="primary-button">Submit private report <span>→</span></button></form></section></main>;
+}
