@@ -24,6 +24,28 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   await connection();
   const { id } = await params;
   if (!hasSupabaseEnv()) return <main className="module-page"><DataState title="Conversation details need Supabase." body="Connect the application backend to load authorized messages. No private message data is mocked here." action={{ label: "Back to inbox", href: "/messages" }} /></main>;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return (
+      <main className="module-page">
+        <div className="module-topbar">
+          <Link href="/" className="auth-brand">
+            <span className="brand-mark">cc</span>
+            <span>campus chemistry</span>
+          </Link>
+          <Link href="/messages" className="text-button">
+            Back to inbox <span>←</span>
+          </Link>
+        </div>
+        <DataState
+          title="Sign in to view this conversation."
+          body="Private messaging is strictly restricted to authenticated conversation participants."
+          action={{ label: "Sign in", href: "/login" }}
+        />
+      </main>
+    );
+  }
   const conversation = await getConversation(id);
   if (!conversation) notFound();
   return <main className="module-page"><div className="module-topbar"><Link href="/" className="auth-brand"><span className="brand-mark">cc</span><span>campus chemistry</span></Link><Link href="/messages" className="text-button">Back to inbox <span>←</span></Link></div><section className="conversation-detail"><span className="eyebrow">PRIVATE CONVERSATION</span><h1>A conversation with room to breathe.</h1><MessageThread conversationId={id} userId={conversation.userId} initialMessages={conversation.messages} /><form action={sendMessage} className="message-form"><input type="hidden" name="conversationId" value={id} /><input name="body" required maxLength={4000} placeholder="Write a message..." /><button className="primary-button" aria-label="Send message">Send <span>→</span></button></form></section></main>;

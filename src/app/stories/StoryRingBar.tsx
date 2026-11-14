@@ -118,9 +118,8 @@ export function StoryRingBar({ initialStories = [] }: { initialStories?: StoryIt
         <button
           className="story-ring-item own-story"
           onClick={() => setShowComposer(true)}
-          aria-label="Add to your 24-hour campus story"
         >
-          <div className="story-circle own-circle">
+          <div className="story-circle own-circle" aria-hidden="true">
             <span className="module-avatar">YOU</span>
             <span className="add-badge">+</span>
           </div>
@@ -128,19 +127,21 @@ export function StoryRingBar({ initialStories = [] }: { initialStories?: StoryIt
         </button>
 
         {/* Peer Story Rings */}
-        {stories.map((story, index) => (
-          <button
-            key={story.id}
-            className="story-ring-item"
-            onClick={() => openStory(index)}
-            aria-label={`View story from ${story.author_name}`}
-          >
-            <div className={`story-circle ring-active ${story.background_style}`}>
-              <span className="avatar avatar-plum">{story.author_initials}</span>
-            </div>
-            <small>{story.author_name.split(" ")[0]}</small>
-          </button>
-        ))}
+        {stories.map((story, index) => {
+          const firstName = story.author_name.split(" ")[0];
+          return (
+            <button
+              key={story.id}
+              className="story-ring-item"
+              onClick={() => openStory(index)}
+            >
+              <div className={`story-circle ring-active ${story.background_style}`} aria-hidden="true">
+                <span className="avatar avatar-plum">{story.author_initials}</span>
+              </div>
+              <small>{firstName}</small>
+            </button>
+          );
+        })}
       </div>
 
       {/* Story Viewer Modal */}

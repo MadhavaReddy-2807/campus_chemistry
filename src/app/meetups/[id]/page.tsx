@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
+import { DataState } from "@/app/_components/DataState";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EventChat } from "./EventChat";
@@ -48,6 +49,29 @@ export default async function MeetupDetailPage({ params }: { params: Promise<{ i
           </div>
           <EventChat eventId={id} />
         </article>
+      </main>
+    );
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return (
+      <main className="module-page">
+        <div className="module-topbar">
+          <Link href="/" className="auth-brand">
+            <span className="brand-mark">cc</span>
+            <span>campus chemistry</span>
+          </Link>
+          <Link href="/meetups" className="text-button">
+            Back to meetups <span>←</span>
+          </Link>
+        </div>
+        <DataState
+          title="Sign in to view meetup details."
+          body="Campus events, attendees, and venue details are protected by student authentication."
+          action={{ label: "Sign in", href: "/login" }}
+        />
       </main>
     );
   }
