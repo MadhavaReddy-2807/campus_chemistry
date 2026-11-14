@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { OFFICIAL_INSTITUTES } from "@/lib/data/institutes";
 import { InstitutePicker } from "./InstitutePicker";
 
 export const instant = false;
@@ -9,10 +10,23 @@ export const instant = false;
 type Institute = { id: string; official_name: string; short_name: string; city: string; state: string; institute_type: "IIT" | "NIT" };
 
 async function getInstitutes(): Promise<Institute[]> {
-  if (!hasSupabaseEnv()) return [];
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.from("institutes").select("id, official_name, short_name, city, state, institute_type").eq("is_active", true).order("official_name");
-  return data ?? [];
+  if (hasSupabaseEnv()) {
+    try {
+      const supabase = await createSupabaseServerClient();
+      const { data } = await supabase.from("institutes").select("id, official_name, short_name, city, state, institute_type").eq("is_active", true).order("official_name");
+      if (data && data.length > 0) return data;
+    } catch {
+      // Fallback to official dataset
+    }
+  }
+  return OFFICIAL_INSTITUTES.map(({ id, official_name, short_name, city, state, institute_type }) => ({
+    id,
+    official_name,
+    short_name,
+    city,
+    state,
+    institute_type,
+  }));
 }
 
 export default async function OnboardingPage() {

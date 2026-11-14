@@ -1,5 +1,21 @@
 # Progress
 
+## 2026-11-14
+
+- Initialized Git repository for `campus-chemistry` to maintain pristine version control across all modules.
+- Implemented the comprehensive authoritative directory covering all 23 IITs and 31 NITs with official email and web domains in `src/lib/data/institutes.ts` and `supabase/migrations/202611130015_full_institute_directory.sql`.
+- Updated onboarding institute picker to render all 54 institutes with real-time client search and server-side domain verification.
+- Built the Campus Communities feature (`/communities`, `/communities/[id]`, `/communities/create`) with category tags, member join/leave actions, discussion forum threads, and RLS policies (`202611130016_communities.sql`).
+- Built 24-hour ephemeral Campus Stories (`/feed` StoryRingBar, full-screen viewer with automated 5s progress bar, Next/Prev navigation, private direct reply, and 24h expiration RLS in `202611130017_stories.sql`).
+- Implemented Valentine's Week cryptographic Secret Crush matchmaking with SHA-256 hashed identifiers, zero unrequited leaks, rate-limiting (max 3 crushes), and symmetric mutual reveal.
+- Built Campus Date Safety Kit in Valentine's Hub with pre-filled WhatsApp/SMS emergency check-in link for hostel roommates/buddies.
+- Implemented Event Chat for confirmed meetup attendees (`/meetups/[id]`) with RLS protection and real-time coordination.
+- Upgraded Admin Operations Dashboard (`/admin`) with real-time KPI tiles, safety report review queue, verification queue shortcuts, and privacy-safe moderation audit controls.
+- Vitest unit test suite expanded to 14 tests across 4 test files — all passing.
+- Next.js production build succeeded with 35 optimized static/dynamic routes.
+- ESLint passed cleanly with 0 errors and 0 warnings.
+- Playwright E2E and smoke suite expanded to 50 tests across desktop and mobile viewports, including Axe accessibility scans — 49 passed, 1 mobile-only assertion appropriately skipped on desktop.
+
 ## 2026-11-13
 
 - Audited `C:\Users\madhava`; no existing Campus Chemistry repository found.
