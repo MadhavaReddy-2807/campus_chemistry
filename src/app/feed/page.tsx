@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { DataState, ModuleHeader } from "@/app/_components/DataState";
+import { MobileNav } from "@/app/_components/MobileNav";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { StoryRingBar, type StoryItem } from "@/app/stories/StoryRingBar";
@@ -137,6 +138,7 @@ export default async function FeedPage() {
           ))}
         </div>
       )}
+      <MobileNav activeTab="Home" />
     </main>
   );
 }

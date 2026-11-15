@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { ModuleHeader } from "@/app/_components/DataState";
+import { MobileNav } from "@/app/_components/MobileNav";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { INITIAL_COMMUNITIES, type Community } from "@/lib/data/communities";
@@ -107,6 +108,7 @@ export default async function CommunitiesPage() {
           </article>
         ))}
       </div>
+      <MobileNav />
     </main>
   );
 }

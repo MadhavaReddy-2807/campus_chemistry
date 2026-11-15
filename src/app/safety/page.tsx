@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ModuleHeader } from "@/app/_components/DataState";
+import { MobileNav } from "@/app/_components/MobileNav";
 
 export default function SafetyPage() {
   return <main className="module-page"><div className="module-topbar"><Link href="/" className="auth-brand"><span className="brand-mark">cc</span><span>campus chemistry</span></Link><Link href="/" className="text-button">Back home <span>←</span></Link></div><ModuleHeader eyebrow="SAFETY & CONTROL" title="Connection should feel chosen, not pressured." body="Campus Chemistry keeps verification, consent, privacy, and reporting visible throughout the experience." />      <div className="safety-grid">
@@ -19,5 +20,7 @@ export default function SafetyPage() {
             File a confidential report <span>→</span>
           </Link>
         </div>
-      </section></main>;
+      </section>
+      <MobileNav />
+    </main>;
 }

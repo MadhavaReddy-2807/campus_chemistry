@@ -4,6 +4,7 @@ import { valentinesCampaign } from "@/lib/config/campaign";
 import { ValentinesCountdown } from "./ValentinesCountdown";
 import { SecretCrushCard } from "./SecretCrushCard";
 import { DateSafetyModal } from "./DateSafetyModal";
+import { MobileNav } from "@/app/_components/MobileNav";
 
 export default function ValentinesPage() {
   return (
@@ -80,6 +81,7 @@ export default function ValentinesPage() {
       <p className="onboarding-note campaign-safety">
         Safety first: never share private verification documents, exact locations, or intimate content without clear consent. Use the safety centre to block or report unwanted contact.
       </p>
+      <MobileNav />
     </main>
   );
 }
