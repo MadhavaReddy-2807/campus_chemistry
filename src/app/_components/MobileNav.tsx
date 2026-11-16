@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Home, Compass, Plus, MessageSquare, User } from "lucide-react";
 
 type MobileNavProps = {
   activeTab?: string;
@@ -18,16 +19,17 @@ export function MobileNav({ activeTab, unreadMessages }: MobileNavProps) {
   };
 
   const navItems = [
-    { label: "Home", href: "/", icon: "⌂" },
-    { label: "Explore", href: "/explore", icon: "⌕" },
-    { label: "Messages", href: "/messages", icon: "✉", badge: unreadMessages },
-    { label: "Profile", href: "/profile", icon: "👤" },
+    { label: "Home", href: "/", icon: Home },
+    { label: "Explore", href: "/explore", icon: Compass },
+    { label: "Messages", href: "/messages", icon: MessageSquare, badge: unreadMessages },
+    { label: "Profile", href: "/profile", icon: User },
   ];
 
   return (
     <nav className="mobile-nav" aria-label="Mobile navigation">
       {navItems.slice(0, 2).map((item) => {
         const active = isCurrent(item.label, item.href);
+        const Icon = item.icon;
         return (
           <Link
             key={item.label}
@@ -35,7 +37,9 @@ export function MobileNav({ activeTab, unreadMessages }: MobileNavProps) {
             className={active ? "is-active" : ""}
             aria-current={active ? "page" : undefined}
           >
-            <span aria-hidden="true">{item.icon}</span>
+            <span aria-hidden="true" style={{ display: "grid", placeItems: "center" }}>
+              <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+            </span>
             <small>{item.label}</small>
           </Link>
         );
@@ -46,12 +50,15 @@ export function MobileNav({ activeTab, unreadMessages }: MobileNavProps) {
         aria-label="Create a post"
         className={isCurrent("Create", "/create") ? "is-active" : ""}
       >
-        <span className="mobile-create" aria-hidden="true">+</span>
+        <span className="mobile-create" aria-hidden="true" style={{ display: "grid", placeItems: "center" }}>
+          <Plus size={20} strokeWidth={2.5} />
+        </span>
         <small>Create</small>
       </Link>
 
       {navItems.slice(2).map((item) => {
         const active = isCurrent(item.label, item.href);
+        const Icon = item.icon;
         return (
           <Link
             key={item.label}
@@ -59,7 +66,9 @@ export function MobileNav({ activeTab, unreadMessages }: MobileNavProps) {
             className={active ? "is-active" : ""}
             aria-current={active ? "page" : undefined}
           >
-            <span aria-hidden="true">{item.icon}</span>
+            <span aria-hidden="true" style={{ display: "grid", placeItems: "center" }}>
+              <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+            </span>
             <small>{item.label}</small>
             {Boolean(item.badge) && <i aria-label={`${item.badge} unread`}>{item.badge}</i>}
           </Link>

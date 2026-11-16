@@ -2,6 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  Home,
+  Compass,
+  SquarePlus,
+  MessageSquare,
+  Users,
+  Calendar,
+  Bell,
+  User,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import { signOutAction } from "@/app/(auth)/auth-actions";
 
 export type UserSummary = {
@@ -26,15 +38,15 @@ export function AppSidebar({ user }: { user?: UserSummary | null }) {
   };
 
   const navLinks = [
-    { label: "Home", href: "/", icon: "⌂" },
-    { label: "Explore", href: "/explore", icon: "⌕" },
-    { label: "Create Post", href: "/create", icon: "＋" },
-    { label: "Messages", href: "/messages", icon: "✉", badge: user?.unread_messages },
-    { label: "Communities", href: "/communities", icon: "❖" },
-    { label: "Events", href: "/meetups", icon: "◷" },
-    { label: "Notifications", href: "/notifications", icon: "🔔", badge: user?.unread_notifications },
-    { label: "Profile", href: "/profile", icon: "👤" },
-    { label: "Settings", href: "/settings", icon: "⚙" },
+    { label: "Home", href: "/", icon: Home },
+    { label: "Explore", href: "/explore", icon: Compass },
+    { label: "Create Post", href: "/create", icon: SquarePlus },
+    { label: "Messages", href: "/messages", icon: MessageSquare, badge: user?.unread_messages },
+    { label: "Communities", href: "/communities", icon: Users },
+    { label: "Events", href: "/meetups", icon: Calendar },
+    { label: "Notifications", href: "/notifications", icon: Bell, badge: user?.unread_notifications },
+    { label: "Profile", href: "/profile", icon: User },
+    { label: "Settings", href: "/settings", icon: Settings },
   ];
 
   return (
@@ -52,6 +64,7 @@ export function AppSidebar({ user }: { user?: UserSummary | null }) {
       <nav className="nav-list" aria-label="Desktop primary navigation">
         {navLinks.map((item) => {
           const active = isCurrent(item.href);
+          const Icon = item.icon;
           return (
             <Link
               key={item.label}
@@ -59,8 +72,8 @@ export function AppSidebar({ user }: { user?: UserSummary | null }) {
               className={`nav-item ${active ? "is-active" : ""}`}
               aria-current={active ? "page" : undefined}
             >
-              <span className="nav-symbol" aria-hidden="true">
-                {item.icon}
+              <span className="nav-symbol" aria-hidden="true" style={{ display: "grid", placeItems: "center" }}>
+                <Icon size={18} strokeWidth={active ? 2.5 : 2} />
               </span>
               <span>{item.label}</span>
               {Boolean(item.badge) && <span className="nav-count">{item.badge}</span>}
@@ -135,9 +148,13 @@ export function AppSidebar({ user }: { user?: UserSummary | null }) {
                     fontSize: 11,
                     fontWeight: 600,
                     cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
                   }}
                 >
-                  Sign out
+                  <LogOut size={13} strokeWidth={2} />
+                  <span>Sign out</span>
                 </button>
               </form>
             </div>
@@ -145,7 +162,7 @@ export function AppSidebar({ user }: { user?: UserSummary | null }) {
         ) : (
           <div style={{ padding: "12px", textAlign: "center" }}>
             <Link href="/login" className="primary-button" style={{ width: "100%", padding: "10px", display: "inline-block", textDecoration: "none" }}>
-              Sign in
+              Log in to CC
             </Link>
           </div>
         )}

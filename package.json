@@ -11,11 +11,13 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "db:apply": "node scripts/apply-migrations.mjs",
-    "db:check": "node scripts/check-db.mjs"
+    "db:check": "node scripts/check-db.mjs",
+    "db:seed": "node scripts/seed-demo-data.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
+    "lucide-react": "^1.73.0",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",

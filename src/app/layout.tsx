@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PwaRegister } from "./PwaRegister";
+import { PersistentAppShell } from "./_components/PersistentAppShell";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -55,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <PwaRegister />
-        {children}
+        <PersistentAppShell>{children}</PersistentAppShell>
       </body>
     </html>
   );

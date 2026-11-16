@@ -42,7 +42,8 @@
   .topbar { height:76px; padding:0 20px; }
   .mobile-brand { display:flex; font-family:Georgia,serif; font-size:14px; }
   .mobile-brand .brand-mark { width:29px; height:29px; font-size:12px; border-radius:10px 10px 10px 3px; }
-  .topbar-title { display:none; }
+  .topbar-title { display:block; }
+  .topbar-title h1 { font-size:16px; margin:0; }
   .topbar-actions { gap:8px; }
   .topbar-actions .avatar { display:none; }
   .development-banner { margin:14px 20px 0; font-size:9px; line-height:1.45; }
