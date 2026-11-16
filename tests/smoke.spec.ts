@@ -40,8 +40,10 @@ test.describe("public and onboarding routes", () => {
 
   test("onboarding displays official 54-institute directory", async ({ page }) => {
     await page.goto("/onboarding");
-    await expect(page.locator("text=Indian Institute of Technology Bombay")).toBeVisible();
-    await expect(page.locator("text=National Institute of Technology Tiruchirappalli")).toBeVisible();
+    const dropdown = page.locator("select[name='instituteId']");
+    await expect(dropdown).toBeVisible();
+    await expect(page.locator("select[name='instituteId'] option").filter({ hasText: "IIT Bombay" })).toBeAttached();
+    await expect(page.locator("select[name='instituteId'] option").filter({ hasText: "NIT Trichy" })).toBeAttached();
   });
 
   test("communities directory renders club cards and discussions", async ({ page }) => {

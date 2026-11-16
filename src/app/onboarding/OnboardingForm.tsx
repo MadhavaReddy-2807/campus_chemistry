@@ -43,22 +43,10 @@ const initialState: OnboardingState = {};
 
 export function OnboardingForm({ institutes }: { institutes: Institute[] }) {
   const [state, formAction, pending] = useActionState(completeOnboarding, initialState);
-  const [search, setSearch] = useState("");
   const [selectedInstitute, setSelectedInstitute] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>("First Year");
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [bio, setBio] = useState("");
-
-  const filteredInstitutes = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return institutes;
-    return institutes.filter(
-      (inst) =>
-        inst.official_name.toLowerCase().includes(q) ||
-        inst.short_name.toLowerCase().includes(q) ||
-        inst.city.toLowerCase().includes(q)
-    );
-  }, [institutes, search]);
 
   const iits = useMemo(
     () =>
@@ -133,7 +121,7 @@ export function OnboardingForm({ institutes }: { institutes: Institute[] }) {
       </div>
 
       {/* 3. Required: Campus Selection */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
           <label htmlFor="institute-dropdown" style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>
             Campus (IIT / NIT) <span style={{ color: "var(--rose)" }}>*</span>
@@ -141,15 +129,12 @@ export function OnboardingForm({ institutes }: { institutes: Institute[] }) {
           <span style={{ fontSize: 11, color: "var(--muted)" }}>54 Official Institutes</span>
         </div>
 
-        {/* Dropdown for selecting IITs and NITs */}
+        {/* Dedicated Dropdown for selecting IITs and NITs */}
         <select
           id="institute-dropdown"
           name="instituteId"
           value={selectedInstitute}
-          onChange={(e) => {
-            setSelectedInstitute(e.target.value);
-            setSearch("");
-          }}
+          onChange={(e) => setSelectedInstitute(e.target.value)}
           required
           style={{
             width: "100%",
@@ -160,89 +145,26 @@ export function OnboardingForm({ institutes }: { institutes: Institute[] }) {
             fontSize: 14,
             fontWeight: 500,
             color: selectedInstitute ? "var(--ink)" : "var(--muted)",
-            marginBottom: 10,
             cursor: "pointer",
+            outline: 0,
           }}
         >
           <option value="">Select your IIT or NIT campus...</option>
           <optgroup label="Indian Institutes of Technology (23 IITs)">
             {iits.map((inst) => (
               <option key={inst.id} value={inst.id}>
-                {inst.short_name} — {inst.city}, {inst.state}
+                {inst.short_name} — {inst.official_name} ({inst.city}, {inst.state})
               </option>
             ))}
           </optgroup>
           <optgroup label="National Institutes of Technology (31 NITs)">
             {nits.map((inst) => (
               <option key={inst.id} value={inst.id}>
-                {inst.short_name} — {inst.city}, {inst.state}
+                {inst.short_name} — {inst.official_name} ({inst.city}, {inst.state})
               </option>
             ))}
           </optgroup>
         </select>
-
-        {/* Quick Search & Filter */}
-        <input
-          id="search-institute"
-          type="search"
-          placeholder="Search IIT or NIT"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: "100%", padding: "10px 14px", border: "1px solid var(--line)", borderRadius: 9, background: "#fbf9f5", fontSize: 13, marginBottom: 8 }}
-        />
-
-        <div
-          role="radiogroup"
-          aria-label="Campus selection"
-          tabIndex={0}
-          style={{
-            maxHeight: 220,
-            overflowY: "auto",
-            border: "1px solid var(--line)",
-            borderRadius: 10,
-            background: "var(--surface)",
-            padding: 6,
-          }}
-        >
-          {filteredInstitutes.length === 0 ? (
-            <div style={{ padding: 14, textAlign: "center", color: "var(--muted)", fontSize: 12 }}>
-              No campus found matching &quot;{search}&quot;.
-            </div>
-          ) : (
-            filteredInstitutes.map((inst) => {
-              const isSelected = selectedInstitute === inst.id;
-              return (
-                <div
-                  key={inst.id}
-                  onClick={() => setSelectedInstitute(inst.id)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    background: isSelected ? "#fcf1ee" : "transparent",
-                    border: isSelected ? "1px solid #e8b3a8" : "1px solid transparent",
-                    marginBottom: 4,
-                  }}
-                >
-                  <div>
-                    <strong style={{ display: "block", fontSize: 13, color: isSelected ? "var(--plum)" : "var(--ink)" }}>
-                      {inst.official_name}
-                    </strong>
-                    <span style={{ fontSize: 11, color: "var(--muted)" }}>
-                      {inst.short_name} · {inst.city}, {inst.state}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: 14, color: isSelected ? "var(--rose)" : "var(--soft)" }}>
-                    {isSelected ? "●" : "○"}
-                  </span>
-                </div>
-              );
-            })
-          )}
-        </div>
       </div>
 
       {/* 4. Optional: Interests */}

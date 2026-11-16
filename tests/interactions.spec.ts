@@ -6,18 +6,16 @@ test.describe("Interactive Controls and User Flows", () => {
     await expect(page.locator("body")).toBeVisible();
   });
 
-  test("Institute picker search and filter", async ({ page }) => {
+  test("Institute dropdown selection", async ({ page }) => {
     await page.goto("/onboarding", { waitUntil: "networkidle" });
-    const searchInput = page.locator("input[placeholder='Search IIT or NIT']");
-    await expect(searchInput).toBeVisible();
+    const dropdown = page.locator("select[name='instituteId']");
+    await expect(dropdown).toBeVisible();
 
-    await searchInput.fill("Madras");
-    await expect(page.locator("text=Indian Institute of Technology Madras")).toBeVisible();
-    await expect(page.locator("text=Indian Institute of Technology Bombay")).not.toBeVisible();
+    await dropdown.selectOption({ label: "IIT Madras — Indian Institute of Technology Madras (Chennai, Tamil Nadu)" });
+    await expect(dropdown).not.toHaveValue("");
 
-    await searchInput.fill("Tiruchirappalli");
-    await expect(page.locator("text=National Institute of Technology Tiruchirappalli")).toBeVisible();
-    await expect(page.locator("text=Indian Institute of Technology Madras")).not.toBeVisible();
+    await dropdown.selectOption({ label: "NIT Trichy — National Institute of Technology Tiruchirappalli (Tiruchirappalli, Tamil Nadu)" });
+    await expect(dropdown).not.toHaveValue("");
   });
 
   test("Valentine's Day Secret Crush Matchmaker with SHA-256 computation", async ({ page }) => {
