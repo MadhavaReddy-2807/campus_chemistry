@@ -7,10 +7,13 @@ const client = new pg.Client({
 
 await client.connect();
 
-const { rows: comms } = await client.query("select id, name, slug from public.communities");
-console.log("Communities in DB:", comms);
+const { rows: cols } = await client.query(
+  "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'discovery_preferences'"
+);
+console.log("Columns of discovery_preferences:", cols);
 
 await client.end();
+
 
 
 

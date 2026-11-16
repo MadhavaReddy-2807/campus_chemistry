@@ -35,6 +35,7 @@ export function PersistentAppShell({ children }: { children: React.ReactNode }) 
       pathname === "/login" ||
       pathname === "/signup" ||
       pathname === "/forgot-password" ||
+      pathname === "/reset-password" ||
       pathname.startsWith("/auth") ||
       pathname.startsWith("/onboarding") ||
       pathname === "/suspended" ||
@@ -100,21 +101,20 @@ export function PersistentAppShell({ children }: { children: React.ReactNode }) 
         <div className="main-column">
           {/* Mobile and desktop topbar */}
           <header className="topbar">
-            <Link href="/" className="mobile-brand" style={{ textDecoration: "none", color: "inherit" }}>
-              <span className="brand-mark">cc</span>
-              <div className="mobile-brand-meta">
-                <span className="mobile-brand-title" style={{ margin: 0, fontSize: "inherit", fontWeight: "inherit" }}>
-                  campus chemistry
-                </span>
-                {user?.campus_short && <span className="mobile-campus-pill">{user.campus_short}</span>}
-              </div>
-            </Link>
-
-            <div className="topbar-title">
-              <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>{computedTitle}</h1>
+            {/* Mobile-only bar: ONLY "Campus Chemistry" */}
+            <div className="mobile-only-brand">
+              <span className="mobile-only-brand-title">Campus Chemistry</span>
             </div>
 
-            <div className="topbar-actions">
+            {/* Desktop-only title */}
+            <div className="desktop-topbar-left">
+              <div className="topbar-title">
+                <span style={{ fontSize: 20, fontWeight: 600, margin: 0, display: "block" }}>{computedTitle}</span>
+              </div>
+            </div>
+
+            {/* Desktop-only action controls */}
+            <div className="topbar-actions desktop-only">
               <Link
                 href="/notifications"
                 className="round-action notification-action"

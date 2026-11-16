@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/app/_components/AppShell";
 import { PostCard, type PostData } from "@/app/_components/PostCard";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
@@ -60,7 +60,21 @@ export default async function ProfilePage({
     .eq("id", currentUser.id)
     .maybeSingle();
 
-  const targetId = requestedId && /^[0-9a-f-]{36}$/i.test(requestedId) ? requestedId : currentUser.id;
+  let targetId = currentUser.id;
+  if (requestedId) {
+    if (/^[0-9a-f-]{36}$/i.test(requestedId)) {
+      targetId = requestedId;
+    } else {
+      const { data: byUsername } = await supabase
+        .from("profiles")
+        .select("id")
+        .ilike("username", requestedId)
+        .maybeSingle();
+      if (byUsername) {
+        targetId = byUsername.id;
+      }
+    }
+  }
   const isOwner = targetId === currentUser.id;
 
   // Fetch target user profile with institute
@@ -71,6 +85,9 @@ export default async function ProfilePage({
     .maybeSingle();
 
   if (!targetProfile) {
+    if (isOwner) {
+      redirect("/onboarding");
+    }
     notFound();
   }
 

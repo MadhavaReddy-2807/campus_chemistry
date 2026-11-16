@@ -5,7 +5,12 @@ import { headers } from "next/headers";
 import { authSchema } from "@/lib/validators/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export type AuthActionState = { error?: string; success?: string };
+export type AuthActionState = {
+  error?: string;
+  success?: string;
+  email?: string;
+  isExisting?: boolean;
+};
 
 async function getRequestOrigin(): Promise<string> {
   const headerList = await headers();
@@ -61,18 +66,42 @@ export async function signUp(_state: AuthActionState, formData: FormData): Promi
   try {
     const origin = await getRequestOrigin();
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
         emailRedirectTo: `${origin}/auth/callback?next=/onboarding`,
       },
     });
-    if (error) return { error: error.message };
+
+    if (error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes("already registered") || msg.includes("user already exists")) {
+        return {
+          success: "If this address is eligible, check your inbox for the next steps.",
+          email: parsed.data.email,
+          isExisting: true,
+        };
+      }
+      return { error: error.message };
+    }
+
+    // In Supabase, if user already exists and email confirm is ON, data.user.identities may be empty
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      return {
+        success: "If this address is eligible, check your inbox for the next steps.",
+        email: parsed.data.email,
+        isExisting: true,
+      };
+    }
+
+    return {
+      success: "Confirmation email sent! Check your inbox to verify your email, then continue to onboarding.",
+      email: parsed.data.email,
+    };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Authentication is not configured yet." };
   }
-  return { success: "Account created! Check your inbox to verify your email, then continue to onboarding." };
 }
 
 export async function forgotPassword(_state: AuthActionState, formData: FormData): Promise<AuthActionState> {
@@ -84,13 +113,35 @@ export async function forgotPassword(_state: AuthActionState, formData: FormData
     const origin = await getRequestOrigin();
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/auth/callback?next=/settings`,
+      redirectTo: `${origin}/auth/callback?next=/reset-password`,
     });
     if (error) return { error: error.message };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Password reset could not be initiated." };
   }
   return { success: "Password reset link sent. Please check your inbox and spam folder." };
+}
+
+export async function resetPassword(_state: AuthActionState, formData: FormData): Promise<AuthActionState> {
+  const password = formData.get("password") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
+
+  if (!password || password.length < 8) {
+    return { error: "Password must be at least 8 characters long." };
+  }
+  if (password !== confirmPassword) {
+    return { error: "Passwords do not match. Please verify your passwords match." };
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return { error: error.message };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to reset password." };
+  }
+
+  return { success: "Password successfully updated! You can now sign in with your new password." };
 }
 
 export async function resendConfirmation(_state: AuthActionState, formData: FormData): Promise<AuthActionState> {
@@ -112,7 +163,7 @@ export async function resendConfirmation(_state: AuthActionState, formData: Form
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not resend confirmation email." };
   }
-  return { success: "A fresh confirmation email has been sent. Please check your inbox and spam folder." };
+  return { success: "A fresh confirmation email has been sent. Please check your inbox and spam folder.", email };
 }
 
 export async function signOutAction() {

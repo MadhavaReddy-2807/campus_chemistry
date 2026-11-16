@@ -169,7 +169,7 @@ export const OFFICIAL_INSTITUTES: InstituteData[] = [
     city: "Varanasi",
     state: "Uttar Pradesh",
     official_website: "https://www.iitbhu.ac.in",
-    domains: ["iitbhu.ac.in"],
+    domains: ["iitbhu.ac.in", "itbhu.ac.in"],
   },
   {
     id: "00000000-0000-0000-0001-000000000017",

@@ -3,6 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  Heart,
+  MessageCircle,
+  Bookmark,
+  MoreHorizontal,
+  UserPlus,
+  UserCheck,
+  Flag,
+  Ban,
+  Edit3,
+  Trash2,
+  Send,
+  CornerDownRight,
+  CheckCircle2,
+} from "lucide-react";
+import {
   togglePostLike,
   togglePostBookmark,
   createComment,
@@ -10,6 +25,7 @@ import {
   deletePost,
   editPost,
   toggleFollow,
+  blockUserFromFeed,
 } from "@/app/feed/actions";
 
 export type PostData = {
@@ -36,6 +52,7 @@ export type PostData = {
     author_username: string;
     body: string;
     created_at: string;
+    parent_id?: string | null;
   }>;
 };
 
@@ -50,16 +67,47 @@ export function PostCard({
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState(post.body || "");
   const [showMenu, setShowMenu] = useState(false);
-  const [copied, setCopied] = useState(false);
+
+  // Optimistic Likes
+  const [hasLiked, setHasLiked] = useState(post.has_liked);
+  const [likesCount, setLikesCount] = useState(post.likes_count);
+
+  // Optimistic Bookmarks
+  const [hasBookmarked, setHasBookmarked] = useState(post.has_bookmarked);
+
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState<{ id: string; name: string } | null>(null);
+  const [commentInput, setCommentInput] = useState("");
 
   const isAuthor = currentUserId === post.author_id;
-  const initials = post.author_name.slice(0, 2).toUpperCase();
+  const initials = post.author_name ? post.author_name.slice(0, 2).toUpperCase() : "CC";
+  const profileUrl = post.author_username ? `/u/${post.author_username}` : `/profile?user=${post.author_id}`;
 
-  const handleCopyLink = () => {
-    const url = `${window.location.origin}/#post-${post.id}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleLike = async () => {
+    const nextState = !hasLiked;
+    setHasLiked(nextState);
+    setLikesCount((prev) => (nextState ? prev + 1 : Math.max(0, prev - 1)));
+    const formData = new FormData();
+    formData.append("postId", post.id);
+    try {
+      await togglePostLike(formData);
+    } catch {
+      // Revert if error
+      setHasLiked(!nextState);
+      setLikesCount((prev) => (!nextState ? prev + 1 : Math.max(0, prev - 1)));
+    }
+  };
+
+  const handleBookmark = async () => {
+    const nextState = !hasBookmarked;
+    setHasBookmarked(nextState);
+    const formData = new FormData();
+    formData.append("postId", post.id);
+    try {
+      await togglePostBookmark(formData);
+    } catch {
+      setHasBookmarked(!nextState);
+    }
   };
 
   return (
@@ -68,11 +116,12 @@ export function PostCard({
       className="real-post"
       style={{
         background: "#ffffff",
-        border: "1px solid var(--line)",
+        border: "1px solid var(--line, #e5e7eb)",
         borderRadius: "16px",
         padding: "20px",
         marginBottom: "16px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+        position: "relative",
       }}
     >
       {/* Header */}
@@ -84,34 +133,44 @@ export function PostCard({
           position: "relative",
         }}
       >
-        <Link
-          href={`/profile?user=${post.author_id}`}
-          style={{ textDecoration: "none", flexShrink: 0 }}
-        >
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: "50%",
-              background: "var(--plum)",
-              color: "#fff",
-              display: "grid",
-              placeItems: "center",
-              fontSize: 14,
-              fontWeight: 700,
-            }}
-          >
-            {initials}
-          </div>
+        <Link href={profileUrl} style={{ textDecoration: "none", flexShrink: 0 }}>
+          {post.author_avatar ? (
+            <img
+              src={post.author_avatar}
+              alt={post.author_name}
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                background: "var(--plum, #4a2c35)",
+                color: "#fff",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              {initials}
+            </div>
+          )}
         </Link>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <Link
-              href={`/profile?user=${post.author_id}`}
+              href={profileUrl}
               style={{
                 textDecoration: "none",
-                color: "var(--ink)",
+                color: "var(--ink, #111827)",
                 fontWeight: 700,
                 fontSize: 14,
               }}
@@ -119,29 +178,19 @@ export function PostCard({
               {post.author_name}
             </Link>
             {post.author_verified && (
-              <span
-                style={{
-                  display: "inline-grid",
-                  placeItems: "center",
-                  width: 14,
-                  height: 14,
-                  borderRadius: "50%",
-                  background: "#4f7755",
-                  color: "#fff",
-                  fontSize: 9,
-                  fontWeight: 900,
-                }}
-                title="Verified IIT/NIT Student"
-              >
-                ✓
-              </span>
+              <CheckCircle2
+                size={14}
+                className="verified-check"
+                style={{ color: "#22c55e", flexShrink: 0 }}
+                aria-label="Verified IIT/NIT Student"
+              />
             )}
             {post.author_campus && (
               <span
                 style={{
                   fontSize: 10,
                   fontWeight: 600,
-                  color: "var(--plum)",
+                  color: "var(--plum, #4a2c35)",
                   background: "#fcf1ee",
                   padding: "2px 8px",
                   borderRadius: 10,
@@ -152,7 +201,7 @@ export function PostCard({
               </span>
             )}
           </div>
-          <small style={{ color: "var(--muted)", fontSize: 11 }}>
+          <small style={{ color: "var(--muted, #6b7280)", fontSize: 11, display: "block" }}>
             @{post.author_username} ·{" "}
             {new Date(post.created_at).toLocaleDateString("en-IN", {
               month: "short",
@@ -161,7 +210,7 @@ export function PostCard({
           </small>
         </div>
 
-        {/* Actions Menu */}
+        {/* Three-dot menu */}
         <div style={{ position: "relative" }}>
           <button
             type="button"
@@ -169,14 +218,16 @@ export function PostCard({
             style={{
               background: "none",
               border: 0,
-              padding: "4px 8px",
-              fontSize: 16,
-              color: "var(--muted)",
+              padding: "6px",
+              color: "var(--muted, #6b7280)",
               cursor: "pointer",
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
             }}
             aria-label="Post options"
           >
-            ···
+            <MoreHorizontal size={18} />
           </button>
 
           {showMenu && (
@@ -184,53 +235,80 @@ export function PostCard({
               style={{
                 position: "absolute",
                 right: 0,
-                top: 28,
-                background: "#fff",
-                border: "1px solid var(--line)",
-                borderRadius: 8,
-                boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
-                zIndex: 20,
-                minWidth: 140,
+                top: 32,
+                background: "#ffffff",
+                border: "1px solid var(--line, #e5e7eb)",
+                borderRadius: 10,
+                boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                zIndex: 40,
+                minWidth: 160,
                 overflow: "hidden",
+                padding: "4px 0",
               }}
             >
+              <Link
+                href={profileUrl}
+                onClick={() => setShowMenu(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 14px",
+                  fontSize: 13,
+                  color: "var(--ink, #111827)",
+                  textDecoration: "none",
+                }}
+              >
+                <UserCheck size={15} />
+                <span>View Profile</span>
+              </Link>
+
               {isAuthor ? (
                 <>
                   <button
+                    type="button"
                     onClick={() => {
                       setIsEditing(!isEditing);
                       setShowMenu(false);
                     }}
                     style={{
-                      display: "block",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
                       width: "100%",
                       textAlign: "left",
-                      padding: "8px 12px",
+                      padding: "10px 14px",
                       background: "none",
                       border: 0,
-                      fontSize: 12,
+                      fontSize: 13,
+                      color: "var(--ink, #111827)",
                       cursor: "pointer",
                     }}
                   >
-                    Edit post
+                    <Edit3 size={15} />
+                    <span>Edit Post</span>
                   </button>
                   <form action={deletePost}>
                     <input type="hidden" name="postId" value={post.id} />
                     <button
                       type="submit"
+                      onClick={() => setShowMenu(false)}
                       style={{
-                        display: "block",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
                         width: "100%",
                         textAlign: "left",
-                        padding: "8px 12px",
+                        padding: "10px 14px",
                         background: "none",
                         border: 0,
-                        fontSize: 12,
-                        color: "#a34c4e",
+                        fontSize: 13,
+                        color: "#dc2626",
                         cursor: "pointer",
                       }}
                     >
-                      Delete post
+                      <Trash2 size={15} />
+                      <span>Delete Post</span>
                     </button>
                   </form>
                 </>
@@ -240,32 +318,66 @@ export function PostCard({
                     <input type="hidden" name="targetId" value={post.author_id} />
                     <button
                       type="submit"
+                      onClick={() => setShowMenu(false)}
                       style={{
-                        display: "block",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
                         width: "100%",
                         textAlign: "left",
-                        padding: "8px 12px",
+                        padding: "10px 14px",
                         background: "none",
                         border: 0,
-                        fontSize: 12,
+                        fontSize: 13,
+                        color: "var(--ink, #111827)",
                         cursor: "pointer",
                       }}
                     >
-                      {post.is_following ? "Unfollow student" : "Follow student"}
+                      {post.is_following ? <UserCheck size={15} /> : <UserPlus size={15} />}
+                      <span>{post.is_following ? "Unfollow" : "Follow"}</span>
                     </button>
                   </form>
+
                   <Link
                     href={`/safety/report?post=${post.id}`}
+                    onClick={() => setShowMenu(false)}
                     style={{
-                      display: "block",
-                      padding: "8px 12px",
-                      fontSize: 12,
-                      color: "#a34c4e",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 14px",
+                      fontSize: 13,
+                      color: "#dc2626",
                       textDecoration: "none",
                     }}
                   >
-                    Report post
+                    <Flag size={15} />
+                    <span>Report Post</span>
                   </Link>
+
+                  <form action={blockUserFromFeed}>
+                    <input type="hidden" name="targetUserId" value={post.author_id} />
+                    <button
+                      type="submit"
+                      onClick={() => setShowMenu(false)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "10px 14px",
+                        background: "none",
+                        border: 0,
+                        fontSize: 13,
+                        color: "#dc2626",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Ban size={15} />
+                      <span>Block User</span>
+                    </button>
+                  </form>
                 </>
               )}
             </div>
@@ -273,7 +385,38 @@ export function PostCard({
         </div>
       </header>
 
-      {/* Body */}
+      {/* Post Images / Carousel */}
+      {post.media && post.media.length > 0 && (
+        <div
+          style={{
+            marginTop: 14,
+            marginBottom: 14,
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "#f3f4f6",
+            display: "grid",
+            gridTemplateColumns: post.media.length > 1 ? "repeat(2, 1fr)" : "1fr",
+            gap: 4,
+          }}
+        >
+          {post.media.map((img) => (
+            <img
+              key={img.id}
+              src={img.storage_path}
+              alt={img.alt_text || "Post attachment"}
+              style={{
+                width: "100%",
+                maxHeight: 480,
+                objectFit: "cover",
+                display: "block",
+              }}
+              loading="lazy"
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Body / Caption */}
       {isEditing ? (
         <form
           action={async (formData) => {
@@ -312,226 +455,292 @@ export function PostCard({
           </div>
         </form>
       ) : (
-        <p
-          style={{
-            margin: "14px 0",
-            fontSize: 15,
-            lineHeight: 1.6,
-            color: "var(--ink)",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-          }}
-        >
-          {post.body}
-        </p>
+        post.body && (
+          <p
+            className="post-caption"
+            style={{
+              margin: "14px 0 10px",
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: "var(--ink, #1f2937)",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {post.body}
+          </p>
+        )
       )}
 
-      {/* Post Images if present */}
-      {post.media && post.media.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: post.media.length > 1 ? "repeat(2, 1fr)" : "1fr",
-            gap: 8,
-            marginBottom: 14,
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
-        >
-          {post.media.map((img) => (
-            <img
-              key={img.id}
-              src={img.storage_path}
-              alt={img.alt_text || "Post media"}
-              style={{
-                width: "100%",
-                maxHeight: 400,
-                objectFit: "cover",
-                borderRadius: 8,
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Engagement Actions Bar */}
+      {/* Action Row — NO SHARE BUTTON */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: 16,
           paddingTop: 12,
-          borderTop: "1px solid var(--line)",
-          fontSize: 12,
+          borderTop: "1px solid var(--line, #f3f4f6)",
+          fontSize: 13,
         }}
       >
-        <form action={togglePostLike} style={{ margin: 0 }}>
-          <input type="hidden" name="postId" value={post.id} />
-          <button
-            type="submit"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              background: "none",
-              border: 0,
-              color: post.has_liked ? "var(--rose)" : "var(--muted)",
-              cursor: "pointer",
-              fontWeight: post.has_liked ? 700 : 500,
-              padding: "4px 0",
-            }}
-            aria-label={post.has_liked ? "Unlike post" : "Like post"}
-          >
-            <span style={{ fontSize: 16 }}>{post.has_liked ? "♥" : "♡"}</span>
-            <span>{post.likes_count > 0 ? post.likes_count : "Like"}</span>
-          </button>
-        </form>
+        {/* Like Button */}
+        <button
+          type="button"
+          onClick={handleLike}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "none",
+            border: 0,
+            color: hasLiked ? "#e11d48" : "var(--muted, #6b7280)",
+            cursor: "pointer",
+            fontWeight: hasLiked ? 700 : 500,
+            padding: "4px 0",
+          }}
+          aria-label={hasLiked ? "Unlike post" : "Like post"}
+        >
+          <Heart
+            size={19}
+            fill={hasLiked ? "#e11d48" : "none"}
+            stroke={hasLiked ? "#e11d48" : "currentColor"}
+            strokeWidth={2}
+          />
+          <span>{likesCount > 0 ? likesCount : "Like"}</span>
+        </button>
 
+        {/* Comment Button */}
         <button
           type="button"
           onClick={() => setShowComments(!showComments)}
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 5,
+            gap: 6,
             background: "none",
             border: 0,
-            color: "var(--muted)",
+            color: "var(--muted, #6b7280)",
             cursor: "pointer",
             fontWeight: 500,
             padding: "4px 0",
           }}
           aria-label="Comments"
         >
-          <span style={{ fontSize: 15 }}>💬</span>
+          <MessageCircle size={19} strokeWidth={2} />
           <span>{post.comments_count > 0 ? post.comments_count : "Comment"}</span>
         </button>
 
-        <form action={togglePostBookmark} style={{ margin: 0 }}>
-          <input type="hidden" name="postId" value={post.id} />
-          <button
-            type="submit"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              background: "none",
-              border: 0,
-              color: post.has_bookmarked ? "var(--plum)" : "var(--muted)",
-              cursor: "pointer",
-              padding: "4px 0",
-            }}
-            aria-label={post.has_bookmarked ? "Saved" : "Save post"}
-          >
-            <span>{post.has_bookmarked ? "★" : "☆"}</span>
-            <span>{post.has_bookmarked ? "Saved" : "Save"}</span>
-          </button>
-        </form>
-
+        {/* Bookmark Button */}
         <button
           type="button"
-          onClick={handleCopyLink}
+          onClick={handleBookmark}
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 5,
+            gap: 6,
             background: "none",
             border: 0,
-            color: "var(--muted)",
+            color: hasBookmarked ? "var(--plum, #4a2c35)" : "var(--muted, #6b7280)",
             cursor: "pointer",
-            marginLeft: "auto",
+            fontWeight: hasBookmarked ? 700 : 500,
             padding: "4px 0",
           }}
+          aria-label={hasBookmarked ? "Saved" : "Save post"}
         >
-          <span>↗</span>
-          <span>{copied ? "Link copied!" : "Share"}</span>
+          <Bookmark
+            size={19}
+            fill={hasBookmarked ? "var(--plum, #4a2c35)" : "none"}
+            stroke={hasBookmarked ? "var(--plum, #4a2c35)" : "currentColor"}
+            strokeWidth={2}
+          />
+          <span>{hasBookmarked ? "Saved" : "Save"}</span>
         </button>
       </div>
 
-      {/* Expandable Comments Drawer */}
+      {/* Comment preview (first comment) when comments are collapsed */}
+      {!showComments && post.comments && post.comments.length > 0 && (
+        <div style={{ marginTop: 10, fontSize: 13, color: "var(--muted, #6b7280)" }}>
+          <button
+            type="button"
+            onClick={() => setShowComments(true)}
+            style={{
+              background: "none",
+              border: 0,
+              padding: 0,
+              color: "var(--muted, #6b7280)",
+              cursor: "pointer",
+              fontSize: 12,
+              marginBottom: 4,
+            }}
+          >
+            View all {post.comments_count} {post.comments_count === 1 ? "comment" : "comments"}
+          </button>
+          <div style={{ lineHeight: 1.4 }}>
+            <strong style={{ color: "var(--ink, #111827)", marginRight: 6 }}>
+              {post.comments[0].author_name}:
+            </strong>
+            <span>{post.comments[0].body}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Expandable Comments Drawer / Sheet */}
       {showComments && (
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--line)" }}>
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--line, #e5e7eb)" }}>
+          {/* Active Reply Banner */}
+          {replyingTo && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "6px 10px",
+                background: "#f3f4f6",
+                borderRadius: 6,
+                fontSize: 11,
+                marginBottom: 8,
+              }}
+            >
+              <span>Replying to <strong>{replyingTo.name}</strong></span>
+              <button
+                type="button"
+                onClick={() => setReplyingTo(null)}
+                style={{ background: "none", border: 0, color: "var(--muted)", cursor: "pointer", fontSize: 11 }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
           {/* Comment composer */}
-          <form action={createComment} style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <form
+            action={async (formData) => {
+              if (!commentInput.trim()) return;
+              await createComment(formData);
+              setCommentInput("");
+              setReplyingTo(null);
+            }}
+            style={{ display: "flex", gap: 8, marginBottom: 16 }}
+          >
             <input type="hidden" name="postId" value={post.id} />
+            {replyingTo && <input type="hidden" name="parentId" value={replyingTo.id} />}
             <input
               name="body"
               type="text"
-              placeholder="Add a comment..."
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              placeholder={replyingTo ? `Reply to ${replyingTo.name}...` : "Add a comment..."}
               required
-              maxLength={1000}
               style={{
                 flex: 1,
                 padding: "8px 12px",
-                borderRadius: 20,
-                border: "1px solid var(--line)",
+                borderRadius: 8,
+                border: "1px solid var(--line, #e5e7eb)",
                 background: "#fbf9f5",
-                fontSize: 12,
+                fontSize: 13,
               }}
             />
             <button
               className="primary-button"
               type="submit"
-              style={{ padding: "8px 14px", borderRadius: 20, fontSize: 11 }}
+              disabled={!commentInput.trim()}
+              style={{ padding: "8px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}
             >
-              Post
+              <Send size={13} />
+              <span>Post</span>
             </button>
           </form>
 
-          {/* Comment list */}
-          {post.comments && post.comments.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {post.comments.map((comment) => (
+          {/* Comments list */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {(!post.comments || post.comments.length === 0) ? (
+              <p style={{ fontSize: 12, color: "var(--muted)", margin: "4px 0" }}>No comments yet. Be the first to start the conversation.</p>
+            ) : (
+              post.comments.map((c) => (
                 <div
-                  key={comment.id}
+                  key={c.id}
                   style={{
-                    background: "#fbf9f5",
-                    padding: "8px 12px",
-                    borderRadius: 10,
                     display: "flex",
-                    justifyContent: "space-between",
+                    gap: 10,
                     alignItems: "flex-start",
+                    fontSize: 13,
+                    padding: "6px 0",
+                    marginLeft: c.parent_id ? 20 : 0,
+                    borderLeft: c.parent_id ? "2px solid var(--line, #e5e7eb)" : "none",
+                    paddingLeft: c.parent_id ? 10 : 0,
                   }}
                 >
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: "flex", gap: 6, alignItems: "baseline", marginBottom: 2 }}>
-                      <strong style={{ fontSize: 12 }}>{comment.author_name}</strong>
-                      <span style={{ fontSize: 10, color: "var(--muted)" }}>
-                        @{comment.author_username}
-                      </span>
-                    </div>
-                    <p style={{ margin: 0, fontSize: 12, color: "var(--ink)", wordBreak: "break-word" }}>
-                      {comment.body}
-                    </p>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: "#e5e7eb",
+                      color: "var(--ink)",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {c.author_name.slice(0, 2).toUpperCase()}
                   </div>
-
-                  {comment.author_id === currentUserId && (
-                    <form action={deleteComment} style={{ margin: 0 }}>
-                      <input type="hidden" name="commentId" value={comment.id} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                      <strong style={{ fontSize: 12, color: "var(--ink)" }}>{c.author_name}</strong>
+                      <small style={{ fontSize: 10, color: "var(--muted)" }}>
+                        {new Date(c.created_at).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                      </small>
+                    </div>
+                    <p style={{ margin: "2px 0 4px", fontSize: 13, color: "var(--ink)", lineHeight: 1.4 }}>
+                      {c.body}
+                    </p>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={() => {
+                          setReplyingTo({ id: c.id, name: c.author_name });
+                        }}
                         style={{
                           background: "none",
                           border: 0,
-                          color: "var(--soft)",
+                          padding: 0,
+                          fontSize: 11,
+                          color: "var(--muted)",
                           cursor: "pointer",
-                          fontSize: 12,
-                          padding: "0 4px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 3,
                         }}
-                        aria-label="Delete comment"
                       >
-                        ✕
+                        <CornerDownRight size={11} />
+                        <span>Reply</span>
                       </button>
-                    </form>
-                  )}
+
+                      {currentUserId === c.author_id && (
+                        <form action={deleteComment} style={{ margin: 0 }}>
+                          <input type="hidden" name="commentId" value={c.id} />
+                          <button
+                            type="submit"
+                            style={{
+                              background: "none",
+                              border: 0,
+                              padding: 0,
+                              fontSize: 11,
+                              color: "#dc2626",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p style={{ margin: "6px 0", fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
-              No comments yet. Start the conversation.
-            </p>
-          )}
+              ))
+            )}
+          </div>
         </div>
       )}
     </article>

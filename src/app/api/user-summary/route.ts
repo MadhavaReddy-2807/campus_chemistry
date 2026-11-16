@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   if (!hasSupabaseEnv()) {
     return NextResponse.json({ user: null });
   }
@@ -29,6 +29,30 @@ export async function GET(_request: NextRequest) {
       .eq("user_id", authUser.id)
       .is("read_at", null);
 
+    let unreadMessagesCount = 0;
+    const { data: memberships } = await supabase
+      .from("conversation_members")
+      .select("conversation_id, last_read_at")
+      .eq("user_id", authUser.id);
+
+    if (memberships && memberships.length > 0) {
+      for (const m of memberships) {
+        let msgQuery = supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", m.conversation_id)
+          .neq("sender_id", authUser.id)
+          .is("deleted_at", null);
+        if (m.last_read_at) {
+          msgQuery = msgQuery.gt("created_at", m.last_read_at);
+        }
+        const { count } = await msgQuery;
+        if (count && count > 0) {
+          unreadMessagesCount += count;
+        }
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const inst = (profile as any)?.institutes;
     const campusShort = inst ? (Array.isArray(inst) ? inst[0]?.short_name : inst.short_name) : undefined;
@@ -45,7 +69,7 @@ export async function GET(_request: NextRequest) {
         campus: campusName || campusShort,
         avatar_url: profile?.avatar_url,
         unread_notifications: unreadNotifs || 0,
-        unread_messages: 0,
+        unread_messages: unreadMessagesCount,
       },
     });
   } catch (err: unknown) {

@@ -102,7 +102,7 @@ export function ProfileHeaderActions({
         className={following ? "secondary-button" : "primary-button"}
         style={{ padding: "0.55rem 1.25rem", fontSize: "0.88rem" }}
       >
-        {following ? "Following ✓" : "Follow"}
+        {following ? "Following" : "Follow"}
       </button>
 
       <button

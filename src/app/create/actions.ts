@@ -8,18 +8,15 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const postSchema = z.object({
   body: z.string().trim().min(1).max(2200),
   audience: z.enum(["campus", "followers", "public"]).default("campus"),
-  imageUrl: z.string().url().optional().or(z.literal("")),
 });
 
 export async function createPost(formData: FormData) {
   const rawBody = formData.get("body");
   const rawAudience = formData.get("audience") || "campus";
-  const rawImageUrl = formData.get("imageUrl") || "";
 
   const parsed = postSchema.safeParse({
     body: rawBody,
     audience: rawAudience,
-    imageUrl: rawImageUrl,
   });
 
   if (!parsed.success) {
@@ -57,14 +54,43 @@ export async function createPost(formData: FormData) {
     throw new Error("We could not publish that post. Please try again.");
   }
 
-  // If image URL provided, link in post_media
-  if (parsed.data.imageUrl) {
-    await supabase.from("post_media").insert({
-      post_id: post.id,
-      storage_path: parsed.data.imageUrl,
-      media_type: "image",
-      sort_order: 0,
-    });
+  // Process uploaded image files
+  const files = formData.getAll("mediaFiles") as File[];
+  let sortOrder = 0;
+
+  for (const file of files) {
+    if (file && typeof file === "object" && file.size > 0) {
+      // Validate size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error("Attached file exceeds the 10MB limit.");
+      }
+      // Validate mime type
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Only images (JPEG, PNG, WebP, GIF) are supported.");
+      }
+
+      const fileExt = file.name.split(".").pop() || "jpg";
+      const cleanFileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+      const storagePath = `${user.id}/${post.id}/${cleanFileName}`;
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const { error: uploadError } = await supabase.storage
+        .from("posts")
+        .upload(storagePath, buffer, {
+          contentType: file.type,
+          upsert: true,
+        });
+
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from("posts").getPublicUrl(storagePath);
+        await supabase.from("post_media").insert({
+          post_id: post.id,
+          storage_path: urlData.publicUrl,
+          media_type: "image",
+          sort_order: sortOrder++,
+        });
+      }
+    }
   }
 
   revalidatePath("/");

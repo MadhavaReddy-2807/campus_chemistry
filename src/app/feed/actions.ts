@@ -188,3 +188,20 @@ export async function toggleFollow(formData: FormData) {
   revalidatePath("/profile");
   revalidatePath("/explore");
 }
+
+export async function blockUserFromFeed(formData: FormData) {
+  const targetUserId = z.string().uuid().parse(formData.get("targetUserId"));
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Sign in before blocking a user.");
+  if (user.id === targetUserId) throw new Error("You cannot block yourself.");
+
+  await supabase.from("blocks").insert({ blocker_id: user.id, blocked_id: targetUserId });
+  // Also remove mutual follow
+  await supabase.from("follows").delete().or(`and(follower_id.eq.${user.id},following_id.eq.${targetUserId}),and(follower_id.eq.${targetUserId},following_id.eq.${user.id})`);
+
+  revalidatePath("/");
+  revalidatePath("/feed");
+  revalidatePath("/profile");
+  revalidatePath("/explore");
+}
