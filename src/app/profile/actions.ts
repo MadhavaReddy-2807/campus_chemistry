@@ -10,6 +10,7 @@ export async function updateStudentProfile(formData: FormData) {
   const bio = formData.get("bio")?.toString().trim() ?? "";
   const studyYear = formData.get("studyYear") ? parseInt(formData.get("studyYear") as string, 10) : 1;
   const avatarUrl = formData.get("avatarUrl")?.toString().trim() || null;
+  const instituteId = formData.get("instituteId")?.toString().trim();
   const interestsRaw = formData.getAll("interests") as string[];
 
   if (!displayName || displayName.length < 2) {
@@ -20,24 +21,33 @@ export async function updateStudentProfile(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Please sign in to update your profile.");
 
-  // Update profile record via secure RPC
-  const { error: profileError } = await supabase.rpc("update_student_profile", {
-    p_display_name: displayName,
-    p_username: "",
-    p_bio: bio.slice(0, 500),
-    p_study_year: Math.min(Math.max(studyYear, 1), 7),
-    p_avatar_url: avatarUrl,
-  });
+  // Update profile record via direct update
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updatePayload: Record<string, any> = {
+    display_name: displayName,
+    bio: bio.slice(0, 500),
+    study_year: Math.min(Math.max(studyYear, 1), 7),
+    avatar_url: avatarUrl,
+    updated_at: new Date().toISOString(),
+  };
+  if (instituteId) {
+    updatePayload.institute_id = instituteId;
+  }
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update(updatePayload)
+    .eq("id", user.id);
 
   if (profileError) {
-    // Fallback direct update
-    await supabase.from("profiles").update({
-      display_name: displayName,
-      bio: bio.slice(0, 500),
-      study_year: Math.min(Math.max(studyYear, 1), 7),
-      avatar_url: avatarUrl,
-      updated_at: new Date().toISOString(),
-    }).eq("id", user.id);
+    // Attempt RPC update as alternative
+    await supabase.rpc("update_student_profile", {
+      p_display_name: displayName,
+      p_username: "",
+      p_bio: bio.slice(0, 500),
+      p_study_year: Math.min(Math.max(studyYear, 1), 7),
+      p_avatar_url: avatarUrl,
+    });
   }
 
   // Update interests

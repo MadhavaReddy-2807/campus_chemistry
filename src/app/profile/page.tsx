@@ -39,10 +39,14 @@ export default async function ProfilePage({
 
   if (!currentUser) {
     return (
-      <div style={{ textAlign: "center", padding: "4rem 1rem" }}>
-        <h2>Sign in to view campus profiles</h2>
-        <p style={{ color: "#64748b", margin: "1rem 0" }}>Profiles are accessible to verified IIT and NIT students.</p>
-        <Link href="/login" className="primary-button" style={{ display: "inline-block" }}>
+      <div style={{ maxWidth: 500, margin: "4rem auto", padding: "2rem", textAlign: "center", background: "#fff", borderRadius: 12, border: "1px solid var(--border-subtle, #e5e7eb)" }}>
+        <h1 style={{ margin: "0 0 0.5rem 0", fontSize: "1.3rem", fontWeight: 700, color: "#111827" }}>
+          Sign in to view profiles
+        </h1>
+        <p style={{ color: "#64748b", margin: "0 0 1.25rem 0", fontSize: "0.88rem" }}>
+          Profiles are accessible to verified IIT and NIT students.
+        </p>
+        <Link href="/login" className="primary-button" style={{ display: "inline-block", padding: "0.55rem 1.25rem", fontSize: "0.88rem" }}>
           Sign In
         </Link>
       </div>

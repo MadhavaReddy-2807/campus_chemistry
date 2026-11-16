@@ -36,6 +36,12 @@ export default async function EditProfilePage() {
     .eq("is_active", true)
     .order("name");
 
+  // Fetch all institutes for campus dropdown
+  const { data: institutes } = await supabase
+    .from("institutes")
+    .select("id, name, short_name, city")
+    .order("name");
+
   // Fetch user's current interests
   const { data: userInterests } = await supabase
     .from("user_interests")
@@ -69,6 +75,8 @@ export default async function EditProfilePage() {
             initialBio={profile.bio || ""}
             initialYear={profile.study_year || 1}
             initialAvatarUrl={profile.avatar_url || ""}
+            initialInstituteId={profile.institute_id || ""}
+            allInstitutes={institutes || []}
             allInterests={interests || []}
             selectedInterestIds={selectedInterestIds}
           />

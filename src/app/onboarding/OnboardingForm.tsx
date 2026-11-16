@@ -60,6 +60,26 @@ export function OnboardingForm({ institutes }: { institutes: Institute[] }) {
     );
   }, [institutes, search]);
 
+  const iits = useMemo(
+    () =>
+      institutes.filter(
+        (i) =>
+          i.short_name.toUpperCase().startsWith("IIT") ||
+          i.official_name.toLowerCase().startsWith("indian institute")
+      ),
+    [institutes]
+  );
+
+  const nits = useMemo(
+    () =>
+      institutes.filter(
+        (i) =>
+          i.short_name.toUpperCase().startsWith("NIT") ||
+          i.official_name.toLowerCase().startsWith("national institute")
+      ),
+    [institutes]
+  );
+
   const toggleInterest = (interest: string) => {
     setSelectedInterests((prev) =>
       prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest]
@@ -114,19 +134,62 @@ export function OnboardingForm({ institutes }: { institutes: Institute[] }) {
 
       {/* 3. Required: Campus Selection */}
       <div style={{ marginBottom: 24 }}>
-        <label htmlFor="search-institute" style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>
-          Campus (IIT / NIT) <span style={{ color: "var(--rose)" }}>*</span>
-        </label>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+          <label htmlFor="institute-dropdown" style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>
+            Campus (IIT / NIT) <span style={{ color: "var(--rose)" }}>*</span>
+          </label>
+          <span style={{ fontSize: 11, color: "var(--muted)" }}>54 Official Institutes</span>
+        </div>
+
+        {/* Dropdown for selecting IITs and NITs */}
+        <select
+          id="institute-dropdown"
+          name="instituteId"
+          value={selectedInstitute}
+          onChange={(e) => {
+            setSelectedInstitute(e.target.value);
+            setSearch("");
+          }}
+          required
+          style={{
+            width: "100%",
+            padding: "12px 14px",
+            border: "1px solid var(--line)",
+            borderRadius: 9,
+            background: "#ffffff",
+            fontSize: 14,
+            fontWeight: 500,
+            color: selectedInstitute ? "var(--ink)" : "var(--muted)",
+            marginBottom: 10,
+            cursor: "pointer",
+          }}
+        >
+          <option value="">Select your IIT or NIT campus...</option>
+          <optgroup label="Indian Institutes of Technology (23 IITs)">
+            {iits.map((inst) => (
+              <option key={inst.id} value={inst.id}>
+                {inst.short_name} — {inst.city}, {inst.state}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="National Institutes of Technology (31 NITs)">
+            {nits.map((inst) => (
+              <option key={inst.id} value={inst.id}>
+                {inst.short_name} — {inst.city}, {inst.state}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+
+        {/* Quick Search & Filter */}
         <input
           id="search-institute"
           type="search"
           placeholder="Search IIT or NIT"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: "100%", padding: "12px 14px", border: "1px solid var(--line)", borderRadius: 9, background: "#fbf9f5", fontSize: 14, marginBottom: 10 }}
+          style={{ width: "100%", padding: "10px 14px", border: "1px solid var(--line)", borderRadius: 9, background: "#fbf9f5", fontSize: 13, marginBottom: 8 }}
         />
-
-        <input type="hidden" name="instituteId" value={selectedInstitute} required />
 
         <div
           role="radiogroup"

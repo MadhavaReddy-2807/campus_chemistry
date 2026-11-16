@@ -17,7 +17,19 @@ export default async function AccountSettingsPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/login");
+    return (
+      <div style={{ maxWidth: 500, margin: "4rem auto", padding: "2rem", textAlign: "center", background: "#fff", borderRadius: 12, border: "1px solid var(--border-subtle, #e5e7eb)" }}>
+        <h1 style={{ margin: "0 0 0.5rem 0", fontSize: "1.3rem", fontWeight: 700, color: "#111827" }}>
+          Sign in to manage your account
+        </h1>
+        <p style={{ color: "#64748b", margin: "0 0 1.25rem 0", fontSize: "0.88rem" }}>
+          Account controls and security settings require student authentication.
+        </p>
+        <Link href="/login" className="primary-button" style={{ display: "inline-block", padding: "0.55rem 1.25rem", fontSize: "0.88rem" }}>
+          Sign In
+        </Link>
+      </div>
+    );
   }
 
   const { data: currentUserProfile } = await supabase

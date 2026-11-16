@@ -9,11 +9,20 @@ type Interest = {
   name: string;
 };
 
+type Institute = {
+  id: string;
+  name: string;
+  short_name: string;
+  city?: string;
+};
+
 export function EditProfileForm({
   initialName,
   initialBio,
   initialYear,
   initialAvatarUrl,
+  initialInstituteId,
+  allInstitutes,
   allInterests,
   selectedInterestIds,
 }: {
@@ -21,6 +30,8 @@ export function EditProfileForm({
   initialBio: string;
   initialYear: number;
   initialAvatarUrl: string;
+  initialInstituteId?: string;
+  allInstitutes?: Institute[];
   allInterests: Interest[];
   selectedInterestIds: string[];
 }) {
@@ -28,6 +39,13 @@ export function EditProfileForm({
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
   const [selectedInterests, setSelectedInterests] = useState<Set<string>>(new Set(selectedInterestIds));
   const [submitting, setSubmitting] = useState(false);
+
+  const iits = (allInstitutes || []).filter(
+    (i) => i.short_name?.toUpperCase().startsWith("IIT") || i.name?.toLowerCase().startsWith("indian institute")
+  );
+  const nits = (allInstitutes || []).filter(
+    (i) => i.short_name?.toUpperCase().startsWith("NIT") || i.name?.toLowerCase().startsWith("national institute")
+  );
 
   const toggleInterest = (id: string) => {
     const next = new Set(selectedInterests);
@@ -147,6 +165,45 @@ export function EditProfileForm({
           <option value={7}>PhD</option>
         </select>
       </div>
+
+      {/* Campus Dropdown for IITs and NITs */}
+      {allInstitutes && allInstitutes.length > 0 && (
+        <div>
+          <label style={{ display: "block", fontSize: "0.88rem", fontWeight: 600, marginBottom: "0.4rem", color: "#374151" }}>
+            Campus (IIT / NIT) <span style={{ color: "#dc2626" }}>*</span>
+          </label>
+          <select
+            name="instituteId"
+            defaultValue={initialInstituteId}
+            required
+            style={{
+              width: "100%",
+              padding: "0.65rem 0.8rem",
+              borderRadius: "8px",
+              border: "1px solid #d1d5db",
+              fontSize: "0.9rem",
+              background: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            <option value="">Select your IIT or NIT campus...</option>
+            <optgroup label="Indian Institutes of Technology (23 IITs)">
+              {iits.map((inst) => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.short_name} — {inst.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="National Institutes of Technology (31 NITs)">
+              {nits.map((inst) => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.short_name} — {inst.name}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </div>
+      )}
 
       {/* Bio */}
       <div>

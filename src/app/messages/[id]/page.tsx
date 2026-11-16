@@ -28,7 +28,9 @@ export default async function ConversationPage({
   if (!user) {
     return (
       <div style={{ maxWidth: 500, margin: "4rem auto", padding: "2rem", textAlign: "center", background: "#fff", borderRadius: 12, border: "1px solid var(--border-subtle, #e5e7eb)" }}>
-        <h2 style={{ margin: "0 0 0.5rem 0" }}>Sign in to view messages</h2>
+        <h1 style={{ margin: "0 0 0.5rem 0", fontSize: "1.3rem", fontWeight: 700, color: "#111827" }}>
+          Sign in to view this conversation
+        </h1>
         <p style={{ color: "#64748b", margin: "0 0 1.25rem 0", fontSize: "0.88rem" }}>
           Private conversations are only accessible to authenticated students.
         </p>
