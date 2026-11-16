@@ -11,3 +11,21 @@ export async function requestAccountDeletion() {
   if (error) throw new Error("We could not submit the deletion request yet.");
   revalidatePath("/settings/account");
 }
+
+export async function changePassword(formData: FormData) {
+  const newPassword = formData.get("newPassword")?.toString();
+  const confirmPassword = formData.get("confirmPassword")?.toString();
+  if (!newPassword || newPassword.length < 8) {
+    throw new Error("Password must be at least 8 characters.");
+  }
+  if (newPassword !== confirmPassword) {
+    throw new Error("Passwords do not match.");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    throw new Error(error.message);
+  }
+  revalidatePath("/settings");
+  revalidatePath("/settings/account");
+}

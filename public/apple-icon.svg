@@ -1,12 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
-    <linearGradient id="apple-cc-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#e78269"/>
-      <stop offset="45%" stop-color="#9f4b59"/>
+    <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9f4b59"/>
       <stop offset="100%" stop-color="#6e2d3a"/>
     </linearGradient>
   </defs>
-  <rect width="180" height="180" rx="42" fill="url(#apple-cc-grad)"/>
-  <path d="M138 32 L142 43 L153 47 L142 51 L138 62 L134 51 L123 47 L134 43 Z" fill="#ffebd9"/>
-  <text x="88" y="122" font-family="Georgia, serif, -apple-system, sans-serif" font-size="94" font-weight="bold" letter-spacing="-6" fill="#ffffff" text-anchor="middle">cc</text>
+  <!-- Modern squircle container -->
+  <rect x="0" y="0" width="64" height="64" rx="16" fill="url(#brand-grad)" />
+  <!-- Minimal clean geometric network connection mark -->
+  <circle cx="23" cy="24" r="5.5" fill="#ffffff" />
+  <circle cx="41" cy="24" r="5.5" fill="#ffffff" />
+  <circle cx="32" cy="42" r="5.5" fill="#ffffff" />
+  <path d="M23 24 L41 24 L32 42 Z" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" fill="none" opacity="0.9" />
+  <circle cx="32" cy="30" r="2.5" fill="#ffd1d7" />
 </svg>

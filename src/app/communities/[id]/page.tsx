@@ -1,176 +1,413 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
+import { AppShell } from "@/app/_components/AppShell";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { INITIAL_COMMUNITIES } from "@/lib/data/communities";
 import { toggleCommunityMembership, createCommunityPost } from "../actions";
 
 export const instant = false;
 
-type Post = {
+type CommunityPost = {
   id: string;
   title: string;
   body: string;
   created_at: string;
   author_id: string;
-  profiles?: { display_name: string; username: string } | null;
+  author_name: string;
+  author_username: string;
+  author_avatar?: string | null;
+  author_campus?: string | null;
 };
 
-async function getCommunityDetails(id: string) {
-  if (hasSupabaseEnv()) {
-    try {
-      const supabase = await createSupabaseServerClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: comm } = await supabase.from("communities").select("*").eq("id", id).maybeSingle();
-      if (comm) {
-        let isMember = false;
-        if (user) {
-          const { data: mem } = await supabase.from("community_members").select("id").eq("community_id", id).eq("user_id", user.id).maybeSingle();
-          isMember = !!mem;
-        }
-        const { data: posts } = await supabase.from("community_posts").select("id, title, body, created_at, author_id, profiles(display_name, username)").eq("community_id", id).order("created_at", { ascending: false });
-        return { community: comm, isMember, posts: (posts as unknown as Post[]) ?? [] };
-      }
-    } catch {
-      // Fallback
-    }
-  }
-
-  const fallback = INITIAL_COMMUNITIES.find((c) => c.id === id);
-  if (!fallback) return null;
-  return {
-    community: fallback,
-    isMember: false,
-    posts: [
-      {
-        id: "post-1",
-        title: "Welcome everyone! Introduce yourselves and your campus project",
-        body: "Glad to kick this community off. Share what you're tinkering with this semester, what year you're in, and what kind of collaborators you're hoping to meet.",
-        created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-        author_id: "system",
-        profiles: { display_name: "Lead Moderator", username: "campus_mod" },
-      },
-    ],
-  };
-}
-
-export default async function CommunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CommunityDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   await connection();
   const { id } = await params;
-  const result = await getCommunityDetails(id);
-  if (!result) notFound();
 
-  const { community, isMember, posts } = result;
+  if (!hasSupabaseEnv()) {
+    redirect("/login");
+  }
 
-  return (
-    <main className="module-page">
-      <div className="module-topbar">
-        <Link href="/" className="auth-brand">
-          <span className="brand-mark">cc</span>
-          <span>campus chemistry</span>
-        </Link>
-        <Link href="/communities" className="text-button module-back">
-          Back to all clubs <span>←</span>
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return (
+      <div style={{ maxWidth: 500, margin: "4rem auto", padding: "2rem", textAlign: "center", background: "#fff", borderRadius: 12, border: "1px solid var(--border-subtle, #e5e7eb)" }}>
+        <h1 style={{ margin: "0 0 0.5rem 0", fontSize: "1.3rem", fontWeight: 700, color: "#111827" }}>
+          Sign in to view club discussions
+        </h1>
+        <p style={{ color: "#64748b", margin: "0 0 1.25rem 0", fontSize: "0.88rem" }}>
+          Community discussions and member details are private to campus students.
+        </p>
+        <Link href="/login" className="primary-button" style={{ display: "inline-block", padding: "0.55rem 1.25rem", fontSize: "0.88rem" }}>
+          Sign In
         </Link>
       </div>
+    );
+  }
 
-      <header className="community-header-box">
-        <div className="community-header-top">
-          <span className="eyebrow">{community.category}</span>
-          <span className="campus-badge">{community.campus_scope ?? "All IITs & NITs"}</span>
-        </div>
-        <h1>{community.name}</h1>
-        <p className="community-detail-description">{community.description}</p>
-        <div className="community-action-row">
-          <form action={toggleCommunityMembership}>
-            <input type="hidden" name="communityId" value={community.id} />
-            <button className={isMember ? "secondary-button" : "primary-button"}>
-              {isMember ? "Leave Community" : "Join this Community"}
-            </button>
-          </form>
-          <span className="community-meta-info">
-            {posts.length} {posts.length === 1 ? "Discussion" : "Discussions"}
-          </span>
-        </div>
-      </header>
+  const { data: currentUserProfile } = await supabase
+    .from("profiles")
+    .select("display_name, username, avatar_url, institutes(short_name)")
+    .eq("id", user.id)
+    .maybeSingle();
 
-      <section className="community-content-layout">
-        <div className="community-discussion-area">
-          <div className="section-heading">
+  // Fetch community
+  const { data: comm } = await supabase
+    .from("communities")
+    .select(`
+      id,
+      name,
+      slug,
+      description,
+      category,
+      campus_scope,
+      created_by,
+      created_at,
+      community_members (
+        user_id,
+        role
+      )
+    `)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!comm) {
+    return (
+      <AppShell
+        activeTab="communities"
+        user={
+          currentUserProfile
+            ? {
+                name: currentUserProfile.display_name,
+                username: currentUserProfile.username,
+                avatar_url: currentUserProfile.avatar_url,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                campus: (currentUserProfile.institutes as any)?.short_name,
+              }
+            : undefined
+        }
+      >
+        <div style={{ maxWidth: 560, margin: "3rem auto", padding: "2rem", textAlign: "center", background: "#fff", borderRadius: 12, border: "1px solid var(--border-subtle, #e5e7eb)" }}>
+          <h2 style={{ margin: "0 0 0.5rem 0", fontSize: "1.2rem" }}>Community Not Found</h2>
+          <p style={{ color: "#64748b", margin: "0 0 1.25rem 0", fontSize: "0.88rem" }}>
+            This community does not exist or may have been archived.
+          </p>
+          <Link href="/communities" className="primary-button" style={{ display: "inline-block", padding: "0.55rem 1.25rem", fontSize: "0.85rem" }}>
+            Explore Communities
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const membersList = (comm.community_members as any[]) || [];
+  const isMember = membersList.some((m) => m.user_id === user.id);
+  const memberCount = membersList.length;
+
+  // Fetch discussions/posts
+  const { data: postsData } = await supabase
+    .from("community_posts")
+    .select(`
+      id,
+      title,
+      body,
+      created_at,
+      author_id,
+      profiles (
+        display_name,
+        username,
+        avatar_url,
+        institutes (
+          short_name
+        )
+      )
+    `)
+    .eq("community_id", id)
+    .order("created_at", { ascending: false });
+
+  const posts: CommunityPost[] = (postsData || []).map((p) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prof = p.profiles as any;
+    return {
+      id: p.id,
+      title: p.title,
+      body: p.body,
+      created_at: p.created_at,
+      author_id: p.author_id,
+      author_name: prof?.display_name || "Student",
+      author_username: prof?.username || "student",
+      author_avatar: prof?.avatar_url,
+      author_campus: prof?.institutes?.short_name,
+    };
+  });
+
+  return (
+    <AppShell
+      activeTab="communities"
+      user={
+        currentUserProfile
+          ? {
+              name: currentUserProfile.display_name,
+              username: currentUserProfile.username,
+              avatar_url: currentUserProfile.avatar_url,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              campus: (currentUserProfile.institutes as any)?.short_name,
+            }
+          : undefined
+      }
+    >
+      <div style={{ maxWidth: "720px", margin: "0 auto", padding: "1.25rem 1rem" }}>
+        {/* Back Link */}
+        <div style={{ marginBottom: "1rem" }}>
+          <Link
+            href="/communities"
+            style={{ fontSize: "0.85rem", color: "#64748b", textDecoration: "none" }}
+          >
+            ← Back to all communities
+          </Link>
+        </div>
+
+        {/* Community Header Card */}
+        <section
+          style={{
+            background: "#ffffff",
+            borderRadius: "14px",
+            border: "1px solid var(--border-subtle, #e5e7eb)",
+            padding: "1.5rem",
+            marginBottom: "1.5rem",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
             <div>
-              <span className="eyebrow">COMMUNITY FORUM</span>
-              <h2>Conversations & Threads</h2>
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem" }}>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "var(--primary-color, #9f4b59)",
+                    background: "#fdf2f2",
+                    padding: "0.2rem 0.6rem",
+                    borderRadius: "6px",
+                  }}
+                >
+                  {comm.category}
+                </span>
+                <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                  • {memberCount} {memberCount === 1 ? "member" : "members"}
+                </span>
+              </div>
+              <h1 style={{ margin: "0 0 0.5rem 0", fontSize: "1.45rem", fontWeight: 700, color: "#111827" }}>
+                {comm.name}
+              </h1>
             </div>
+
+            <form action={toggleCommunityMembership}>
+              <input type="hidden" name="communityId" value={comm.id} />
+              <button
+                type="submit"
+                className={isMember ? "secondary-button" : "primary-button"}
+                style={{ padding: "0.55rem 1.25rem", fontSize: "0.88rem" }}
+              >
+                {isMember ? "Joined ✓" : "Join Club"}
+              </button>
+            </form>
           </div>
 
-          <div className="post-composer-box">
-            <form action={createCommunityPost}>
-              <input type="hidden" name="communityId" value={community.id} />
+          <p style={{ margin: "1rem 0 0 0", fontSize: "0.92rem", lineHeight: 1.55, color: "#374151" }}>
+            {comm.description}
+          </p>
+        </section>
+
+        {/* Discussion Composer (Only if Member) */}
+        {isMember ? (
+          <section
+            style={{
+              background: "#ffffff",
+              borderRadius: "14px",
+              border: "1px solid var(--border-subtle, #e5e7eb)",
+              padding: "1.25rem",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <h2 style={{ margin: "0 0 0.75rem 0", fontSize: "1rem", fontWeight: 600, color: "#111827" }}>
+              Start a Discussion
+            </h2>
+            <form action={createCommunityPost} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <input type="hidden" name="communityId" value={comm.id} />
               <input
                 name="title"
                 required
+                minLength={3}
                 maxLength={150}
-                placeholder="Topic title or question..."
-                className="composer-title-input"
+                placeholder="Topic or question title..."
+                style={{
+                  width: "100%",
+                  padding: "0.6rem 0.8rem",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "0.9rem",
+                }}
               />
               <textarea
                 name="body"
                 required
+                minLength={5}
                 maxLength={3000}
                 rows={3}
-                placeholder="Share your perspective, project link, or ask for guidance..."
+                placeholder="Share details, code snippets, project links, or discussion points..."
+                style={{
+                  width: "100%",
+                  padding: "0.6rem 0.8rem",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "0.9rem",
+                  resize: "vertical",
+                }}
               />
-              <div className="composer-footer">
-                <span className="hint">Keep interactions constructive and respectful.</span>
-                <button className="primary-button" type="submit">
-                  Start discussion <span>→</span>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="submit"
+                  className="primary-button"
+                  style={{ padding: "0.5rem 1.25rem", fontSize: "0.85rem" }}
+                >
+                  Post Discussion
                 </button>
               </div>
             </form>
+          </section>
+        ) : (
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "12px",
+              padding: "1rem 1.25rem",
+              marginBottom: "1.5rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+            }}
+          >
+            <span style={{ fontSize: "0.88rem", color: "#475569" }}>
+              Join this community to start discussions and participate in conversations.
+            </span>
+            <form action={toggleCommunityMembership}>
+              <input type="hidden" name="communityId" value={comm.id} />
+              <button
+                type="submit"
+                className="primary-button"
+                style={{ padding: "0.45rem 1rem", fontSize: "0.82rem" }}
+              >
+                Join Now
+              </button>
+            </form>
           </div>
+        )}
 
-          <div className="discussion-list">
-            {posts.length === 0 ? (
-              <p className="empty-threads">No discussions yet. Start the first thread above!</p>
-            ) : (
-              posts.map((post) => (
-                <article key={post.id} className="module-card discussion-card">
-                  <header className="discussion-card-header">
-                    <span className="module-avatar">
-                      {post.profiles?.display_name.slice(0, 2).toUpperCase() ?? "CC"}
-                    </span>
-                    <div>
-                      <strong>{post.profiles?.display_name ?? "Campus Student"}</strong>
-                      <small>
-                        @{post.profiles?.username ?? "student"} ·{" "}
-                        {new Date(post.created_at).toLocaleDateString()}
-                      </small>
+        {/* Discussions List */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <h2 style={{ margin: "0 0 0.25rem 0", fontSize: "1.1rem", fontWeight: 600, color: "#111827" }}>
+            Discussions ({posts.length})
+          </h2>
+
+          {posts.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "3rem 1rem",
+                background: "#ffffff",
+                borderRadius: "12px",
+                border: "1px solid var(--border-subtle, #e5e7eb)",
+                color: "#6b7280",
+              }}
+            >
+              <p style={{ margin: 0, fontSize: "0.92rem" }}>
+                No discussions yet. Be the first member to start a discussion thread!
+              </p>
+            </div>
+          ) : (
+            posts.map((post) => (
+              <article
+                key={post.id}
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  border: "1px solid var(--border-subtle, #e5e7eb)",
+                  padding: "1.25rem",
+                }}
+              >
+                {/* Author Info */}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.75rem" }}>
+                  <Link
+                    href={`/profile?user=${post.author_id}`}
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      background: "#f1f5f9",
+                      color: "#334155",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      textDecoration: "none",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {post.author_avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={post.author_avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      post.author_name.slice(0, 2).toUpperCase()
+                    )}
+                  </Link>
+
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      <Link
+                        href={`/profile?user=${post.author_id}`}
+                        style={{ fontWeight: 600, fontSize: "0.88rem", color: "#111827", textDecoration: "none" }}
+                      >
+                        {post.author_name}
+                      </Link>
+                      {post.author_campus && (
+                        <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                          • {post.author_campus}
+                        </span>
+                      )}
                     </div>
-                  </header>
-                  <h3 className="discussion-title">{post.title}</h3>
-                  <p className="discussion-body">{post.body}</p>
-                </article>
-              ))
-            )}
-          </div>
-        </div>
+                    <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                      {new Date(post.created_at).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                </div>
 
-        <aside className="community-sidebar-info">
-          <div className="module-card">
-            <span className="eyebrow">GUIDELINES</span>
-            <h3>Community Norms</h3>
-            <ul className="guidelines-list">
-              <li>No spam or unvetted commercial promotions.</li>
-              <li>Encourage inter-campus collaboration across IITs & NITs.</li>
-              <li>Report harassment or inappropriate behavior immediately.</li>
-            </ul>
-            <Link href="/safety" className="text-button" style={{ marginTop: "1rem" }}>
-              Campus Safety Policy <span>↗</span>
-            </Link>
-          </div>
-        </aside>
-      </section>
-    </main>
+                {/* Content */}
+                <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.05rem", fontWeight: 600, color: "#111827" }}>
+                  {post.title}
+                </h3>
+                <p style={{ margin: 0, fontSize: "0.9rem", lineHeight: 1.5, color: "#374151", whiteSpace: "pre-line" }}>
+                  {post.body}
+                </p>
+              </article>
+            ))
+          )}
+        </div>
+      </div>
+    </AppShell>
   );
 }

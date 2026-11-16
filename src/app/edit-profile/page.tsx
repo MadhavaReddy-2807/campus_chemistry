@@ -1,19 +1,79 @@
-import Link from "next/link";
 import { connection } from "next/server";
-import { DataState } from "@/app/_components/DataState";
+import { redirect } from "next/navigation";
+import { AppShell } from "@/app/_components/AppShell";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { updateProfile } from "@/app/profile/actions";
+import { EditProfileForm } from "./EditProfileForm";
 
 export const instant = false;
 
 export default async function EditProfilePage() {
   await connection();
-  if (!hasSupabaseEnv()) return <main className="module-page"><DataState title="Profile editing needs Supabase." body="Connect the backend to save profile changes securely." action={{ label: "Back home", href: "/" }} /></main>;
+  if (!hasSupabaseEnv()) {
+    redirect("/login");
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <main className="module-page"><DataState title="Sign in to edit your profile." body="Your profile details are only editable by your account." action={{ label: "Sign in", href: "/login" }} /></main>;
-  const { data: profile } = await supabase.from("profiles").select("display_name, username, bio, degree, department, study_year").eq("id", user.id).maybeSingle();
-  if (!profile) return <main className="module-page"><DataState title="No profile yet." body="Complete onboarding before editing profile details." action={{ label: "Start onboarding", href: "/onboarding" }} /></main>;
-  return <main className="module-page"><div className="module-topbar"><Link href="/profile" className="auth-brand"><span className="brand-mark">cc</span><span>campus chemistry</span></Link><Link href="/profile" className="text-button">Cancel <span>×</span></Link></div><section className="create-card"><span className="eyebrow">YOUR PROFILE</span><h1>Make it sound like you.</h1><p>These details can be edited later. Your student email and verification records never appear here.</p><form action={updateProfile} className="post-form"><label>Display name<input name="displayName" required maxLength={80} defaultValue={profile.display_name} /></label><label>Username<input name="username" required maxLength={24} defaultValue={profile.username} /></label><label>Bio<textarea name="bio" maxLength={500} defaultValue={profile.bio ?? ""} placeholder="A sentence that sounds like you..." /></label><div className="form-two-column"><label>Degree<input name="degree" maxLength={120} defaultValue={profile.degree ?? ""} placeholder="B.Tech" /></label><label>Study year<input name="studyYear" type="number" min="1" max="10" defaultValue={profile.study_year ?? 1} /></label></div><label>Department<input name="department" maxLength={120} defaultValue={profile.department ?? ""} placeholder="Computer Science" /></label><button className="primary-button">Save profile <span>→</span></button></form></section></main>;
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, username, bio, study_year, avatar_url, institute_id, institutes(short_name)")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile) {
+    redirect("/onboarding");
+  }
+
+  // Fetch all interests
+  const { data: interests } = await supabase
+    .from("interests")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("name");
+
+  // Fetch user's current interests
+  const { data: userInterests } = await supabase
+    .from("user_interests")
+    .select("interest_id")
+    .eq("user_id", user.id);
+
+  const selectedInterestIds = (userInterests || []).map((ui) => ui.interest_id);
+
+  return (
+    <AppShell
+      activeTab="profile"
+      user={{
+        name: profile.display_name,
+        username: profile.username,
+        avatar_url: profile.avatar_url,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        campus: (profile.institutes as any)?.short_name,
+      }}
+    >
+      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "1.5rem 1rem" }}>
+        <div style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid var(--border-subtle, #e5e7eb)", padding: "1.75rem" }}>
+          <h1 style={{ margin: "0 0 0.4rem 0", fontSize: "1.35rem", fontWeight: 700, color: "#111827" }}>
+            Edit Profile
+          </h1>
+          <p style={{ margin: "0 0 1.5rem 0", fontSize: "0.88rem", color: "#64748b" }}>
+            Update your student profile details. These are visible across campus feeds and directory.
+          </p>
+
+          <EditProfileForm
+            initialName={profile.display_name}
+            initialBio={profile.bio || ""}
+            initialYear={profile.study_year || 1}
+            initialAvatarUrl={profile.avatar_url || ""}
+            allInterests={interests || []}
+            selectedInterestIds={selectedInterestIds}
+          />
+        </div>
+      </div>
+    </AppShell>
+  );
 }

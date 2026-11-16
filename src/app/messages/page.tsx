@@ -1,91 +1,143 @@
-import Link from "next/link";
 import { connection } from "next/server";
-import { DataState, ModuleHeader } from "@/app/_components/DataState";
-import { MobileNav } from "@/app/_components/MobileNav";
+import { redirect } from "next/navigation";
+import { AppShell } from "@/app/_components/AppShell";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ConversationListClient, type ConversationItem } from "./ConversationListClient";
 
 export const instant = false;
 
-type Conversation = { id: string; kind: string; created_at: string };
-async function getConversations(): Promise<Conversation[]> {
-  if (!hasSupabaseEnv()) return [];
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.from("conversations").select("id, kind, created_at, conversation_members!inner(user_id)").limit(30).order("created_at", { ascending: false });
-  return (data as Conversation[] | null) ?? [];
-}
-
-const sampleMatches = [
-  { name: "Naina", campus: "IIT Bombay", initials: "NS" },
-  { name: "Ananya", campus: "IIT Delhi", initials: "AK" },
-  { name: "Rhea", campus: "IIT Madras", initials: "RM" },
-  { name: "Tanvi", campus: "NIT Trichy", initials: "TP" },
-  { name: "Dev", campus: "IIT Roorkee", initials: "DS" },
-];
-
 export default async function MessagesPage() {
   await connection();
-  const conversations = await getConversations();
+  if (!hasSupabaseEnv()) {
+    redirect("/login");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Fetch current user's profile for AppShell
+  const { data: currentUserProfile } = await supabase
+    .from("profiles")
+    .select("display_name, username, avatar_url, institutes(short_name)")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // Find all conversations the user is a member of
+  const { data: userMemberships } = await supabase
+    .from("conversation_members")
+    .select("conversation_id, last_read_at")
+    .eq("user_id", user.id);
+
+  const conversationIds = (userMemberships || []).map((m) => m.conversation_id);
+  const lastReadMap = new Map((userMemberships || []).map((m) => [m.conversation_id, m.last_read_at]));
+
+  const conversationItems: ConversationItem[] = [];
+
+  if (conversationIds.length > 0) {
+    // Fetch peer members for these conversations
+    const { data: peerMembers } = await supabase
+      .from("conversation_members")
+      .select(`
+        conversation_id,
+        user:profiles (
+          id,
+          display_name,
+          username,
+          avatar_url,
+          institutes (
+            short_name
+          )
+        )
+      `)
+      .in("conversation_id", conversationIds)
+      .neq("user_id", user.id);
+
+    // Fetch latest message for each conversation
+    const { data: messages } = await supabase
+      .from("messages")
+      .select("id, conversation_id, sender_id, body, created_at")
+      .in("conversation_id", conversationIds)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    // Group latest message by conversation_id
+    const latestMessageMap = new Map<string, { id: string; sender_id: string; body: string; created_at: string }>();
+    for (const msg of messages || []) {
+      if (!latestMessageMap.has(msg.conversation_id)) {
+        latestMessageMap.set(msg.conversation_id, msg);
+      }
+    }
+
+    for (const pm of peerMembers || []) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const peer = pm.user as any;
+      if (!peer) continue;
+
+      const latestMsg = latestMessageMap.get(pm.conversation_id);
+      const lastRead = lastReadMap.get(pm.conversation_id);
+
+      const isUnread = Boolean(
+        latestMsg &&
+        latestMsg.sender_id !== user.id &&
+        (!lastRead || new Date(latestMsg.created_at) > new Date(lastRead))
+      );
+
+      let timeStr = "";
+      if (latestMsg) {
+        const d = new Date(latestMsg.created_at);
+        const now = new Date();
+        if (d.toDateString() === now.toDateString()) {
+          timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        } else {
+          timeStr = d.toLocaleDateString([], { month: "short", day: "numeric" });
+        }
+      }
+
+      conversationItems.push({
+        id: pm.conversation_id,
+        peerId: peer.id,
+        peerName: peer.display_name || "Student",
+        peerUsername: peer.username || "student",
+        peerAvatar: peer.avatar_url,
+        peerCampus: peer.institutes?.short_name,
+        lastMessageSnippet: latestMsg ? latestMsg.body : "Direct conversation started",
+        lastMessageTime: timeStr,
+        isUnread,
+      });
+    }
+  }
 
   return (
-    <main className="module-page">
-      <div className="module-topbar">
-        <Link href="/" className="auth-brand">
-          <span className="brand-mark">cc</span>
-          <span>campus chemistry</span>
-        </Link>
-        <Link href="/" className="text-button">
-          Back home <span>←</span>
-        </Link>
+    <AppShell
+      activeTab="messages"
+      user={
+        currentUserProfile
+          ? {
+              name: currentUserProfile.display_name,
+              username: currentUserProfile.username,
+              avatar_url: currentUserProfile.avatar_url,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              campus: (currentUserProfile.institutes as any)?.short_name,
+            }
+          : undefined
+      }
+    >
+      <div style={{ maxWidth: "680px", margin: "0 auto", padding: "1.25rem 1rem" }}>
+        <div style={{ marginBottom: "1.25rem" }}>
+          <h1 style={{ margin: "0 0 0.25rem 0", fontSize: "1.35rem", fontWeight: 700, color: "#111827" }}>
+            Messages
+          </h1>
+          <p style={{ margin: 0, fontSize: "0.88rem", color: "#64748b" }}>
+            Direct conversations with fellow IIT and NIT students.
+          </p>
+        </div>
+
+        <ConversationListClient conversations={conversationItems} />
       </div>
-
-      <ModuleHeader
-        eyebrow="YOUR INBOX"
-        title="Conversations with room to breathe."
-        body="Only authorized conversation members can read or send messages. Realtime delivery will attach to these records."
-      />
-
-      {/* Bumble/Tinder-style New Matches Horizontal Carousel Tray */}
-      <section className="matches-tray" aria-label="New matches queue">
-        <div className="matches-tray-header">
-          <strong>NEW MATCHES</strong>
-          <span className="matches-count-badge">{sampleMatches.length} recent</span>
-        </div>
-        <div className="matches-scroll-row">
-          {sampleMatches.map((m) => (
-            <Link key={m.name} href="/matches" className="match-bubble" aria-label={`Match with ${m.name} from ${m.campus}`}>
-              <div className="match-bubble-circle">
-                <div className="match-bubble-inner">{m.initials}</div>
-              </div>
-              <span className="match-bubble-name">{m.name}</span>
-              <span className="match-bubble-campus">{m.campus.split(" ")[1] ?? m.campus}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {!hasSupabaseEnv() || conversations.length === 0 ? (
-        <DataState
-          title="Your inbox is quiet for now."
-          body="Matches, approved direct messages, and event conversations will appear here once the campus backend is connected."
-          action={{ label: "Explore discovery", href: "/discover" }}
-        />
-      ) : (
-        <div className="conversation-list">
-          {conversations.map((conversation) => (
-            <Link className="conversation-row" href={`/messages/${conversation.id}`} key={conversation.id}>
-              <span className="module-avatar">CC</span>
-              <span>
-                <strong>{conversation.kind === "match" ? "New connection" : "Campus conversation"}</strong>
-                <small>Conversation created {new Date(conversation.created_at).toLocaleDateString()}</small>
-              </span>
-              <span>→</span>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      <MobileNav activeTab="Messages" />
-    </main>
+    </AppShell>
   );
 }

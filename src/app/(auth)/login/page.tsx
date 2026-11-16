@@ -15,42 +15,30 @@ function LoginForm() {
   const [state, formAction, pending] = useActionState(signIn, initialState);
   const [resendState, resendAction, resendPending] = useActionState(resendConfirmation, initialState);
   const [showResend, setShowResend] = useState(Boolean(isExpired));
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="auth-card">
-      <Link href="/" className="auth-brand">
+      <div className="auth-brand">
         <span className="brand-mark">cc</span>
         <span>campus chemistry</span>
-      </Link>
-      <span className="eyebrow">WELCOME BACK</span>
-      <h1>Good to see you.</h1>
-      <p className="auth-intro">Sign in to your verified campus space.</p>
+      </div>
+      <span className="eyebrow">STUDENT PORTAL</span>
+      <h1>Welcome back</h1>
+      <p className="auth-intro">Sign in to your verified IIT/NIT campus network.</p>
 
       {urlError && (
-        <div
-          className="form-error"
-          role="alert"
-          style={{
-            padding: "12px 14px",
-            background: "#fff1f0",
-            border: "1px solid #f2c2bd",
-            borderRadius: 8,
-            marginBottom: 16,
-            fontSize: 12,
-            lineHeight: 1.45,
-          }}
-        >
-          <strong>Notice: </strong>
+        <div className="form-error" role="alert" style={{ padding: "10px 14px", background: "#fff1f0", border: "1px solid #f2c2bd", borderRadius: 8, marginBottom: 16 }}>
           {urlError.includes("otp_expired") || urlError.includes("Email link is invalid or has expired")
-            ? "Your email confirmation link has expired or was already used. You can resend a fresh confirmation link below."
+            ? "Your confirmation link has expired or was already used. Request a new link below."
             : urlError}
         </div>
       )}
 
       {showResend ? (
-        <form action={resendAction} className="auth-form" style={{ marginBottom: 20 }}>
+        <form action={resendAction} className="auth-form">
           <label>
-            Email address to resend confirmation
+            Email address
             <input
               name="email"
               type="email"
@@ -61,9 +49,8 @@ function LoginForm() {
           </label>
           {resendState.error && <p className="form-error" role="alert">{resendState.error}</p>}
           {resendState.success && <p className="form-success" role="status">{resendState.success}</p>}
-          <button className="primary-button" disabled={resendPending}>
+          <button className="primary-button" type="submit" disabled={resendPending}>
             {resendPending ? "Sending…" : "Resend confirmation email"}
-            <span>→</span>
           </button>
           <button
             type="button"
@@ -87,49 +74,51 @@ function LoginForm() {
             />
           </label>
           <label>
-            Password
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Password</span>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ background: "none", border: 0, color: "var(--muted)", cursor: "pointer", fontSize: 11, padding: 0 }}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
             <input
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               placeholder="At least 8 characters"
               required
             />
           </label>
           {state.error && <p className="form-error" role="alert">{state.error}</p>}
-          <button className="primary-button" disabled={pending}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -6 }}>
+            <Link href="/forgot-password" style={{ fontSize: 11, color: "var(--muted)", textDecoration: "none" }}>
+              Forgot password?
+            </Link>
+          </div>
+          <button className="primary-button" type="submit" disabled={pending}>
             {pending ? "Signing in…" : "Sign in"}
-            <span>→</span>
           </button>
         </form>
       )}
 
-      <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11 }}>
+      <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
         <p className="auth-switch" style={{ margin: 0 }}>
-          New here? <Link href="/signup">Create account</Link>
+          New student? <Link href="/signup">Create account</Link>
         </p>
         {!showResend && (
           <button
             type="button"
             onClick={() => setShowResend(true)}
-            style={{
-              background: "none",
-              border: 0,
-              color: "var(--rose)",
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
-              padding: 0,
-            }}
+            style={{ background: "none", border: 0, color: "var(--rose)", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: 0 }}
           >
             Resend email link?
           </button>
         )}
       </div>
-
-      <p className="auth-footnote">
-        Social participation and dating consent are separate choices. Dating discovery is only available to verified users aged 18+.
-      </p>
     </div>
   );
 }
